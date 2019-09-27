@@ -15,6 +15,8 @@ public class Connection {
         this.p = p;
         this.s = s;
         this.recv = new Recv(s);
+        System.out.println("New connection made to: " +
+                s.getInetAddress().getHostAddress() + "_" + s.getPort());
     }
 
     public static Connection newConnection(Peer p, Socket s) throws IOException {
