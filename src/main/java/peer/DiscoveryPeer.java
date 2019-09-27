@@ -1,9 +1,11 @@
 package peer;
 
+import network.Connection;
 import network.ServerThread;
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.net.Socket;
 
 public class DiscoveryPeer implements Peer {
     private ServerThread serverThread;
@@ -24,5 +26,10 @@ public class DiscoveryPeer implements Peer {
 
     public static void main(String[] args) throws IOException {
         new DiscoveryPeer(Integer.parseInt(args[0]));
+    }
+
+    @Override
+    public void addNewConnection(Connection c) {
+
     }
 }
