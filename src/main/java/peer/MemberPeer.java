@@ -1,5 +1,7 @@
 package peer;
 
+import message.DiscoverMessage;
+import message.Message;
 import network.Connection;
 import network.ServerThread;
 
@@ -7,40 +9,73 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MemberPeer implements Peer {
-    InetAddress dicoveryAddr;
-    int port;
-    Connection discoveryPeer;
+    private InetAddress dicoveryAddr;
+    private int discoveryPort;
 
+    Connection discoveryConnection;
     ServerThread serverThread;
+    String id;
     Map<String, Connection> connectionMap = new ConcurrentHashMap<>();
 
 
-    public MemberPeer(InetAddress discoveryAddr, int port) throws IOException {
+    public MemberPeer(InetAddress discoveryAddr, int discoveryPort, String id) throws IOException {
         this.dicoveryAddr = discoveryAddr;
-        this.port = port;
+        this.discoveryPort = discoveryPort;
+        if (id == null)
+            id = getTimestampId();
+        else
+            this.id = id;
 
         ServerSocket ss = new ServerSocket(0);
         serverThread = new ServerThread(this, ss);
         serverThread.start();
         System.out.println("New member node listening for connections on: " + ss.getLocalPort());
 
-        Socket s = new Socket(discoveryAddr, port);
-        discoveryPeer = new Connection(this, s);
+        Socket s = new Socket(discoveryAddr, discoveryPort);
+        discoveryConnection = new Connection(this, s);
 
-        discoveryPeer.sendMessage("testing message send");
+        DiscoverMessage dm = new DiscoverMessage(id, discoveryConnection.getRemoteAddr(), ss.getLocalPort());
+        discoveryConnection.sendMessage(dm);
+        //startConsole();
     }
 
     public static void main(String[] args) throws Exception {
         InetAddress discoveryPeerAddr = InetAddress.getByName(args[0]);
-        new MemberPeer(discoveryPeerAddr, Integer.parseInt(args[1]));
+        if (args.length == 2)
+            new MemberPeer(discoveryPeerAddr, Integer.parseInt(args[1]), null);
+        else {
+            new MemberPeer(discoveryPeerAddr, Integer.parseInt(args[1]), args[2]);
+        }
+
     }
+
+    public void startConsole() {
+
+    }
+
+    @Override
+    public void parseMessage(Message msg) {
+
+    }
+
+    public int getServerPort() {
+        return serverThread.getPort();
+    }
+
 
     public void addNewConnection(Connection c) {
         connectionMap.put(c.getAddr(), c);
     }
+
+    private String getTimestampId() {
+        return Long.toHexString(System.currentTimeMillis());
+    }
 }
+
+
+
+

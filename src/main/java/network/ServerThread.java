@@ -23,4 +23,8 @@ public class ServerThread extends Thread {
             }
         }
     }
+
+    public int getPort() {
+        return serv.getLocalPort();
+    }
 }

@@ -16,7 +16,7 @@ public class Connection {
     public Connection(Peer p, Socket s) throws IOException {
         this.p = p;
         this.s = s;
-        this.recv = new Recv(s);
+        this.recv = new Recv(s, p);
         this.recv.start();
 
         out = new DataOutputStream(s.getOutputStream());
@@ -34,13 +34,18 @@ public class Connection {
         return s.getInetAddress().getHostName();
     }
 
+    public String getRemoteAddr(){
+        return s.getRemoteSocketAddress().toString();
+    }
+
     public int getPort() {
         return s.getPort();
     }
 
-    public void sendMessage(String msg) throws IOException {
-        System.out.println("Sending the message: " + msg);
-        out.writeUTF(msg);
+    public void sendMessage(Message msg) throws IOException {
+        byte[] messageInBytes = msg.toBytes();
+        out.writeInt(messageInBytes.length);
+        out.write(messageInBytes);
     }
 
 }
