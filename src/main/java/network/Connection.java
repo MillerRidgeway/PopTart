@@ -34,9 +34,6 @@ public class Connection {
         return s.getInetAddress().getHostName();
     }
 
-    public String getRemoteAddr(){
-        return s.getRemoteSocketAddress().toString();
-    }
 
     public int getPort() {
         return s.getPort();

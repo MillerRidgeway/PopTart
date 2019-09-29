@@ -38,7 +38,7 @@ public class MemberPeer implements Peer {
         Socket s = new Socket(discoveryAddr, discoveryPort);
         discoveryConnection = new Connection(this, s);
 
-        DiscoverMessage dm = new DiscoverMessage(id, discoveryConnection.getRemoteAddr(), ss.getLocalPort());
+        DiscoverMessage dm = new DiscoverMessage(id, discoveryConnection.getAddr(), ss.getLocalPort(), discoveryConnection.getPort());
         discoveryConnection.sendMessage(dm);
         //startConsole();
     }
@@ -71,8 +71,10 @@ public class MemberPeer implements Peer {
         connectionMap.put(c.getAddr(), c);
     }
 
-    private String getTimestampId() {
-        return Long.toHexString(System.currentTimeMillis());
+    private String getTimestampId() throws IOException {
+        long timeStamp = System.currentTimeMillis();
+        String hex = Long.toHexString(timeStamp);
+        return hex.substring(hex.length() - 4);
     }
 }
 
