@@ -39,10 +39,15 @@ public class Connection {
         return s.getPort();
     }
 
+    public int getLocalPort() {
+        return s.getLocalPort();
+    }
+
     public void sendMessage(Message msg) throws IOException {
         byte[] messageInBytes = msg.toBytes();
         out.writeInt(messageInBytes.length);
         out.write(messageInBytes);
+        out.flush();
     }
 
 }

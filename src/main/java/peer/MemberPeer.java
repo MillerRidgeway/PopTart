@@ -2,6 +2,7 @@ package peer;
 
 import message.DiscoverMessage;
 import message.Message;
+import message.RediscoverMessage;
 import network.Connection;
 import network.ServerThread;
 
@@ -10,6 +11,7 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MemberPeer implements Peer {
@@ -38,9 +40,11 @@ public class MemberPeer implements Peer {
         Socket s = new Socket(discoveryAddr, discoveryPort);
         discoveryConnection = new Connection(this, s);
 
-        DiscoverMessage dm = new DiscoverMessage(id, discoveryConnection.getAddr(), ss.getLocalPort(), discoveryConnection.getPort());
+        DiscoverMessage dm = new DiscoverMessage(id, discoveryConnection.getAddr(), serverThread.getPort(),
+                discoveryConnection.getLocalPort());
+
         discoveryConnection.sendMessage(dm);
-        //startConsole();
+        run();
     }
 
     public static void main(String[] args) throws Exception {
@@ -53,13 +57,18 @@ public class MemberPeer implements Peer {
 
     }
 
-    public void startConsole() {
-
+    public void run() {
+        Scanner scn = new Scanner(System.in);
+        System.out.print("Please enter a command: ");
+        String command = scn.nextLine();
     }
 
     @Override
-    public void parseMessage(Message msg) {
-
+    public void parseMessage(Message msg) throws IOException {
+        if (msg instanceof RediscoverMessage) {
+            System.out.println("Got rediscover, trying again.");
+            parseRediscoverMessage((RediscoverMessage) msg);
+        }
     }
 
     public int getServerPort() {
@@ -75,6 +84,13 @@ public class MemberPeer implements Peer {
         long timeStamp = System.currentTimeMillis();
         String hex = Long.toHexString(timeStamp);
         return hex.substring(hex.length() - 4);
+    }
+
+    public void parseRediscoverMessage(RediscoverMessage msg) throws IOException {
+        String randId = getTimestampId();
+        DiscoverMessage dm = new DiscoverMessage(randId, discoveryConnection.getAddr(), serverThread.getPort(),
+                discoveryConnection.getLocalPort());
+        discoveryConnection.sendMessage(dm);
     }
 }
 
