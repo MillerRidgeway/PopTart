@@ -38,4 +38,12 @@ public class Util {
         }
         return buf;
     }
+
+    public int getIdDifference(String id1, String id2) {
+        for (int i = 0; i < id1.length(); i++) {
+            if (id1.charAt(i) != id2.charAt(i))
+                return i;
+        }
+        return 0;
+    }
 }
