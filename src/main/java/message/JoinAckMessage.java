@@ -17,7 +17,7 @@ public class JoinAckMessage extends Message implements Serializable {
     }
 
     public String getRandPeer() {
-        return this.randPeer;
+        return this.randPeer.split("_")[0];
     }
 
     public int getHostPort() {

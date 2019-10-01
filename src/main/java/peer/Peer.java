@@ -9,4 +9,5 @@ import java.net.Socket;
 public interface Peer {
     void addNewConnection(Connection c);
     void parseMessage(Message msg) throws IOException;
+    String getId();
 }

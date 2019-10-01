@@ -32,9 +32,13 @@ public class Connection {
     }
 
     public String getAddr() {
-        return s.getInetAddress().getHostName();
+        return s.getInetAddress().getHostAddress();
     }
 
+    @Override
+    public String toString(){
+        return p.getId() + "-" + getAddr() + "_" + getPort();
+    }
 
     public int getPort() {
         return s.getPort();

@@ -4,6 +4,7 @@ import message.*;
 import network.Connection;
 import network.ServerThread;
 import routing.LeafSet;
+import routing.RoutingTable;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -26,6 +27,7 @@ public class MemberPeer implements Peer {
     private LeafSet leafSet;
     private static final Logger logger = Logger.getLogger(DiscoveryPeer.class.getName());
     private static FileHandler fh;
+    private RoutingTable routingTable;
 
 
     public MemberPeer(InetAddress discoveryAddr, int discoveryPort, String id) throws IOException {
@@ -56,7 +58,7 @@ public class MemberPeer implements Peer {
         logger.addHandler(fh);
         logger.setLevel(Level.FINE);
 
-        startConsole();
+        //startConsole();
     }
 
     public static void main(String[] args) throws Exception {
@@ -86,15 +88,23 @@ public class MemberPeer implements Peer {
         } else if (msg instanceof JoinAckMessage) {
             logger.log(Level.FINE, "Got join ack.");
             parseJoinAckMessage((JoinAckMessage) msg);
+        } else if (msg instanceof JoinPeerMessage) {
+            logger.log(Level.FINE, "Got peer join.");
+            parseJoinPeerMessage((JoinPeerMessage) msg);
         }
+    }
+
+    @Override
+    public String getId() {
+        return this.id;
     }
 
 
     public void addNewConnection(Connection c) {
-        connectionMap.put(c.getAddr(), c);
+        connectionMap.put(c.getAddr() + "_" + c.getPort(), c);
     }
 
-    private String getTimestampId() throws IOException {
+    private String getTimestampId() {
         long timeStamp = System.currentTimeMillis();
         String hex = Long.toHexString(timeStamp);
         return hex.substring(hex.length() - 4);
@@ -114,16 +124,22 @@ public class MemberPeer implements Peer {
     }
 
     private void parseJoinAckMessage(JoinAckMessage msg) {
-        logger.log(Level.FINE, "Join request recieved, opening connection to new peer");
+        logger.log(Level.FINE, "Join request received, opening connection to new peer");
         logger.log(Level.FINE, "Peer IP: " + msg.getRandPeer());
         logger.log(Level.FINE, "Peer host port: " + msg.getHostPort());
 
         try {
             Socket s = new Socket(InetAddress.getByName(msg.getRandPeer()), msg.getHostPort());
             Connection c = new Connection(this, s);
+            c.sendMessage(new JoinPeerMessage(this.id));
         } catch (Exception e) {
-            logger.log(Level.SEVERE, "Exception occured when parsing a join req: " + e);
+            logger.log(Level.SEVERE, "Exception occurred when parsing a join req: " + e);
         }
+    }
+
+    private void parseJoinPeerMessage(JoinPeerMessage msg) {
+        logger.log(Level.FINE, "Join peer message received.");
+        logger.log(Level.FINE, "Joining peer ID: " + msg.getId());
     }
 
 }

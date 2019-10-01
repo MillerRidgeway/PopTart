@@ -42,16 +42,22 @@ public class DiscoveryPeer implements Peer {
         new DiscoveryPeer(Integer.parseInt(args[0]));
     }
 
-    public void startConsole() {
+    private void startConsole() {
         Scanner scn = new Scanner(System.in);
-        System.out.println("Please enter a command: ");
-        String command = scn.nextLine();
-        switch(command){
-            case "list-nodes":
-
-
+        while (true) {
+            System.out.println("Please enter a command: ");
+            String command = scn.nextLine();
+            switch (command) {
+                case "list-nodes":
+                    for (Map.Entry<String, Connection> e : connectionMap.entrySet()) {
+                        System.out.println("Connected node: " + e.getValue().toString());
+                        break;
+                    }
+                default:
+                    System.out.println("Unknown command.");
+                    break;
+            }
         }
-        System.out.println("The command was: " + command);
     }
 
     @Override
@@ -62,8 +68,13 @@ public class DiscoveryPeer implements Peer {
     }
 
     @Override
+    public String getId() {
+        return "Discovery Peer";
+    }
+
+    @Override
     public void addNewConnection(Connection c) {
-        connectionMap.put(c.getAddr(), c);
+        connectionMap.put(c.getAddr() + "_" + c.getPort(), c);
     }
 
     private void parseDiscoverMessage(DiscoverMessage msg) throws IOException {
@@ -85,7 +96,9 @@ public class DiscoveryPeer implements Peer {
             logger.log(Level.FINE, "Sending a random node for routing.");
             //Get a random peer from the active peer set
             Random generator = new Random();
-            Object[] vals = connectionMap.keySet().toArray();
+            Map<String, Connection> tempMap = new ConcurrentHashMap<>(connectionMap);
+            tempMap.remove(connectionMap.get(msg.getHost() + "_" + msg.getPort()));
+            Object[] vals = tempMap.keySet().toArray();
             c.sendMessage(new JoinAckMessage((String) vals[generator.nextInt(vals.length)], msg.getHostPort()));
         }
     }
