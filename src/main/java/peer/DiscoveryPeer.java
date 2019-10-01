@@ -46,6 +46,11 @@ public class DiscoveryPeer implements Peer {
         Scanner scn = new Scanner(System.in);
         System.out.println("Please enter a command: ");
         String command = scn.nextLine();
+        switch(command){
+            case "list-nodes":
+
+
+        }
         System.out.println("The command was: " + command);
     }
 

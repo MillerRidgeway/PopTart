@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
@@ -116,6 +117,13 @@ public class MemberPeer implements Peer {
         logger.log(Level.FINE, "Join request recieved, opening connection to new peer");
         logger.log(Level.FINE, "Peer IP: " + msg.getRandPeer());
         logger.log(Level.FINE, "Peer host port: " + msg.getHostPort());
+
+        try {
+            Socket s = new Socket(InetAddress.getByName(msg.getRandPeer()), msg.getHostPort());
+            Connection c = new Connection(this, s);
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "Exception occured when parsing a join req: " + e);
+        }
     }
 
 }
