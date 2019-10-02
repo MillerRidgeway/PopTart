@@ -3,18 +3,18 @@ package routing;
 import peer.Peer;
 
 public class LeafSet {
-    Peer hi, lo;
+    String hi, lo;
 
-    public LeafSet(Peer hi, Peer lo) {
+    public LeafSet(String hi, String lo) {
         this.hi = hi;
         this.lo = lo;
     }
 
-    public Peer getHi() {
+    public String getHi() {
         return this.hi;
     }
 
-    public Peer getLo() {
+    public String getLo() {
         return this.lo;
     }
 

@@ -17,6 +17,7 @@ public class DiscoveryPeer implements Peer {
     private ServerThread serverThread;
     private int port;
     private final Map<String, Connection> connectionMap = new ConcurrentHashMap<>();
+    private final Map<String, Integer> connectionHostMap = new ConcurrentHashMap<>();
     private final ArrayList<String> knownIds = new ArrayList<>();
     private static final Logger logger = Logger.getLogger(DiscoveryPeer.class.getName());
 
@@ -82,7 +83,7 @@ public class DiscoveryPeer implements Peer {
         logger.log(Level.FINE, "Host addr: " + msg.getHost());
         logger.log(Level.FINE, "Host port: " + msg.getHostPort());
         logger.log(Level.FINE, "Thread port: " + msg.getPort());
-        logger.log(Level.FINE, "ID of peer: " + msg.getId());
+        logger.log(Level.FINE, "ID: " + msg.getId());
         Connection c = connectionMap.get(msg.getHost() + "_" + msg.getPort());
 
         if (knownIds.contains(msg.getId())) {
@@ -92,6 +93,7 @@ public class DiscoveryPeer implements Peer {
             logger.log(Level.FINE, "First connected peer, sending first connect ack.");
             c.sendMessage(new FirstConnectAckMessage());
             knownIds.add(msg.getId());
+            connectionHostMap.put(msg.getHost() + "_" + msg.getPort(), msg.getHostPort());
         } else {
             logger.log(Level.FINE, "Sending a random node for routing.");
             //Get a random peer from the active peer set
@@ -99,7 +101,11 @@ public class DiscoveryPeer implements Peer {
             Map<String, Connection> tempMap = new ConcurrentHashMap<>(connectionMap);
             tempMap.remove(connectionMap.get(msg.getHost() + "_" + msg.getPort()));
             Object[] vals = tempMap.keySet().toArray();
-            c.sendMessage(new JoinAckMessage((String) vals[generator.nextInt(vals.length)], msg.getHostPort()));
+            String key = (String) vals[generator.nextInt(vals.length)];
+            c.sendMessage(new JoinAckMessage(key, connectionHostMap.get(key)));
+
+            knownIds.add(msg.getId());
+            connectionHostMap.put(msg.getHost() + "_" + msg.getPort(), msg.getHostPort());
         }
     }
 }

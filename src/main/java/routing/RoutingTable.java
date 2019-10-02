@@ -8,4 +8,8 @@ public class RoutingTable {
     public RoutingTable(ArrayList<ArrayList<String>> table) {
         this.table = table;
     }
+
+    public String findClosest(String id){
+        return "find closest call";
+    }
 }

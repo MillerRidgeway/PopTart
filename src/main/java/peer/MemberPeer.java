@@ -29,7 +29,6 @@ public class MemberPeer implements Peer {
     private static FileHandler fh;
     private RoutingTable routingTable;
 
-
     public MemberPeer(InetAddress discoveryAddr, int discoveryPort, String id) throws IOException {
         this.dicoveryAddr = discoveryAddr;
         this.discoveryPort = discoveryPort;
@@ -119,19 +118,19 @@ public class MemberPeer implements Peer {
 
     private void parseFirstConnectAckMessage(FirstConnectAckMessage msg) {
         logger.log(Level.FINE, "First connect: Setting leafset to itself");
-        leafSet = new LeafSet(this, this);
+        leafSet = new LeafSet(this.id, this.id);
         logger.log(Level.FINE, "New leafset is: " + leafSet.toString());
     }
 
     private void parseJoinAckMessage(JoinAckMessage msg) {
-        logger.log(Level.FINE, "Join request received, opening connection to new peer");
+        logger.log(Level.FINE, "Join ack received, opening connection to new peer");
         logger.log(Level.FINE, "Peer IP: " + msg.getRandPeer());
         logger.log(Level.FINE, "Peer host port: " + msg.getHostPort());
 
         try {
             Socket s = new Socket(InetAddress.getByName(msg.getRandPeer()), msg.getHostPort());
             Connection c = new Connection(this, s);
-            c.sendMessage(new JoinPeerMessage(this.id));
+            c.sendMessage(new JoinPeerMessage(this.id, serverThread.getPort()));
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Exception occurred when parsing a join req: " + e);
         }
@@ -140,6 +139,9 @@ public class MemberPeer implements Peer {
     private void parseJoinPeerMessage(JoinPeerMessage msg) {
         logger.log(Level.FINE, "Join peer message received.");
         logger.log(Level.FINE, "Joining peer ID: " + msg.getId());
+        logger.log(Level.FINE, "Peer host port: " + msg.getHostPort());
+
+        routingTable.findClosest(msg.getId());
     }
 
 }
