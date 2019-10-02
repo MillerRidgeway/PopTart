@@ -24,10 +24,11 @@ public class MemberPeer implements Peer {
     private ServerThread serverThread;
     private String id;
     private Map<String, Connection> connectionMap = new ConcurrentHashMap<>();
-    private LeafSet leafSet;
+    public LeafSet leafSet;
+    private RoutingTable routingTable;
     private static final Logger logger = Logger.getLogger(DiscoveryPeer.class.getName());
     private static FileHandler fh;
-    private RoutingTable routingTable;
+
 
     public MemberPeer(InetAddress discoveryAddr, int discoveryPort, String id) throws IOException {
         this.dicoveryAddr = discoveryAddr;

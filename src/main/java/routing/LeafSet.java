@@ -18,6 +18,14 @@ public class LeafSet {
         return this.lo;
     }
 
+    public void setHi(String newHi) {
+        this.hi = newHi;
+    }
+
+    public void setLo(String newLo) {
+        this.lo = newLo;
+    }
+
     @Override
     public String toString() {
         return "Hi: " + getHi() + " Lo: " + getLo();
