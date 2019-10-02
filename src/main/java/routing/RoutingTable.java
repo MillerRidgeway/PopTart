@@ -1,7 +1,6 @@
 package routing;
 
 import peer.MemberPeer;
-import peer.Peer;
 import peer.Util;
 
 import java.util.ArrayList;
@@ -14,7 +13,7 @@ public class RoutingTable {
     public RoutingTable(MemberPeer owner) {
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 16; j++) {
-                table.get(i).add("");
+                table.get(i).add("DEFAULT");
             }
         }
         this.owner = owner;
@@ -44,5 +43,19 @@ public class RoutingTable {
 
     public void insertNewPeer(String id) {
 
+    }
+
+    @Override
+    public String toString() {
+        String tableString = "";
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 16; j++) {
+                if (j == 15)
+                    tableString += table.get(i).get(j) + "\n";
+                else
+                    tableString += table.get(i).get(j) + ",";
+            }
+        }
+        return tableString;
     }
 }

@@ -40,7 +40,10 @@ public class DiscoveryPeer implements Peer {
 
 
     public static void main(String[] args) throws IOException {
-        new DiscoveryPeer(Integer.parseInt(args[0]));
+        String testId1 = "0ef2";
+        String testId2 = "0ef7";
+        System.out.println("Difference between two strings: " + Util.getIdDifference(testId1,testId2));
+        //new DiscoveryPeer(Integer.parseInt(args[0]));
     }
 
     private void startConsole() {
