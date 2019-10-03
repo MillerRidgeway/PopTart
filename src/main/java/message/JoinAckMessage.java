@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class JoinAckMessage extends Message implements Serializable {
+public class JoinAckMessage extends Message {
     private String randPeer;
     private int hostPort;
 

@@ -2,7 +2,7 @@ package message;
 
 import java.io.*;
 
-public class DiscoverMessage extends Message implements Serializable {
+public class DiscoverMessage extends Message {
     private String id, host;
     private int hostPort, port;
 

@@ -37,7 +37,7 @@ public class MemberPeer implements Peer {
             this.id = getTimestampId();
         else
             this.id = id;
-        leafSet = null;
+        leafSet = new LeafSet("", "", "", "");
 
         //Server thread
         ServerSocket ss = new ServerSocket(0);
@@ -124,10 +124,7 @@ public class MemberPeer implements Peer {
     }
 
     private void parseFirstConnectAckMessage(FirstConnectAckMessage msg) {
-        leafSet = new LeafSet(this.id, this.id);
-
-        logger.log(Level.FINE, "First connect: Setting leafset to itself");
-        logger.log(Level.FINE, "New leafset is: " + leafSet.toString());
+        logger.log(Level.FINE, "First connect acknowledged by discovery node...waiting");
     }
 
     private void parseJoinAckMessage(JoinAckMessage msg) throws IOException {
@@ -145,11 +142,21 @@ public class MemberPeer implements Peer {
         logger.log(Level.FINE, "Join request is from: " + msg.getAddr());
         logger.log(Level.FINE, "Join request is from port: " + msg.getPort());
 
+        Connection c = ipConnectionMap.get(msg.getAddr() + "_" + msg.getPort());
 
+
+        if (leafSet.isEmpty()) {
+            this.leafSet.setHi(msg.getId(), msg.getAddr() + "_" + msg.getPort());
+            this.leafSet.setLo(msg.getId(), msg.getAddr() + "_" + msg.getPort());
+            c.sendMessage(new JoinPeerAckMessage());
+        }
+
+        if (leafSet.contains(msg.getId())) {
+            c.sendMessage(new DestinationFoundMessage());
+        }
         //routingTable.findClosestIp(routingTable.findClosest(msg.getId()));
 
-        Connection c = ipConnectionMap.get(msg.getAddr() + "_" + msg.getPort());
-        c.sendMessage(new JoinPeerAckMessage());
+
     }
 
     private void parseJoinPeerAckMessage(JoinPeerAckMessage msg) {

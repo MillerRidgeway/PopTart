@@ -2,5 +2,5 @@ package message;
 
 import java.io.Serializable;
 
-public class FirstConnectAckMessage extends Message implements Serializable {
+public class FirstConnectAckMessage extends Message {
 }

@@ -2,7 +2,7 @@ package message;
 
 import java.io.Serializable;
 
-public class JoinPeerMessage extends Message implements Serializable {
+public class JoinPeerMessage extends Message {
     private String id, addr;
     private int port;
 
