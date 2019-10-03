@@ -31,13 +31,17 @@ public class Connection {
         return new Connection(p, s);
     }
 
+    @Override
+    public String toString() {
+        return p.getId() + "-" + getAddr() + "_" + getPort();
+    }
+
     public String getAddr() {
         return s.getInetAddress().getHostAddress();
     }
 
-    @Override
-    public String toString(){
-        return p.getId() + "-" + getAddr() + "_" + getPort();
+    public String getLocalAddr() {
+        return s.getLocalAddress().getHostAddress();
     }
 
     public int getPort() {

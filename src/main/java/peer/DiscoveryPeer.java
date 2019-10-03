@@ -40,10 +40,7 @@ public class DiscoveryPeer implements Peer {
 
 
     public static void main(String[] args) throws IOException {
-        String testId1 = "0ef2";
-        String testId2 = "0ef7";
-        System.out.println("Difference between two strings: " + Util.getIdDifference(testId1,testId2));
-        //new DiscoveryPeer(Integer.parseInt(args[0]));
+        new DiscoveryPeer(Integer.parseInt(args[0]));
     }
 
     private void startConsole() {
@@ -102,7 +99,7 @@ public class DiscoveryPeer implements Peer {
             //Get a random peer from the active peer set
             Random generator = new Random();
             Map<String, Connection> tempMap = new ConcurrentHashMap<>(connectionMap);
-            tempMap.remove(connectionMap.get(msg.getHost() + "_" + msg.getPort()));
+            tempMap.remove(msg.getHost() + "_" + msg.getPort());
             Object[] vals = tempMap.keySet().toArray();
             String key = (String) vals[generator.nextInt(vals.length)];
             c.sendMessage(new JoinAckMessage(key, connectionHostMap.get(key)));

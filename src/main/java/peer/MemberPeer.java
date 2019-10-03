@@ -34,7 +34,7 @@ public class MemberPeer implements Peer {
         this.dicoveryAddr = discoveryAddr;
         this.discoveryPort = discoveryPort;
         if (id == null)
-            id = getTimestampId();
+            this.id = getTimestampId();
         else
             this.id = id;
         leafSet = null;
@@ -79,18 +79,21 @@ public class MemberPeer implements Peer {
 
     @Override
     public void parseMessage(Message msg) throws IOException {
-        if (msg instanceof RediscoverMessage) {
+        if (msg instanceof RediscoverMessage) { //Collision within the ID space
             logger.log(Level.FINE, "Got rediscover, trying again.");
             parseRediscoverMessage((RediscoverMessage) msg);
-        } else if (msg instanceof FirstConnectAckMessage) {
+        } else if (msg instanceof FirstConnectAckMessage) { //First connected peer
             logger.log(Level.FINE, "Got first connect ack");
             parseFirstConnectAckMessage((FirstConnectAckMessage) msg);
-        } else if (msg instanceof JoinAckMessage) {
+        } else if (msg instanceof JoinAckMessage) { //Acknowledge join request, attempt to contact given peer
             logger.log(Level.FINE, "Got join ack.");
             parseJoinAckMessage((JoinAckMessage) msg);
-        } else if (msg instanceof JoinPeerMessage) {
+        } else if (msg instanceof JoinPeerMessage) { // Being contacted by another peer to join
             logger.log(Level.FINE, "Got peer join.");
             parseJoinPeerMessage((JoinPeerMessage) msg);
+        } else if (msg instanceof JoinPeerAckMessage) { //Got response for join req, forward or stop if closest.
+            logger.log(Level.FINE, "Got forward/response to join.");
+            parseJoinPeerAckMessage((JoinPeerAckMessage) msg);
         }
     }
 
@@ -111,38 +114,44 @@ public class MemberPeer implements Peer {
     }
 
     private void parseRediscoverMessage(RediscoverMessage msg) throws IOException {
+        logger.log(Level.FINE, "Got rediscover (ID collision), sending with new ID");
+
         String randId = getTimestampId();
+        this.id = randId;
         DiscoverMessage dm = new DiscoverMessage(randId, discoveryConnection.getAddr(), serverThread.getPort(),
                 discoveryConnection.getLocalPort());
         discoveryConnection.sendMessage(dm);
     }
 
     private void parseFirstConnectAckMessage(FirstConnectAckMessage msg) {
-        logger.log(Level.FINE, "First connect: Setting leafset to itself");
         leafSet = new LeafSet(this.id, this.id);
+
+        logger.log(Level.FINE, "First connect: Setting leafset to itself");
         logger.log(Level.FINE, "New leafset is: " + leafSet.toString());
     }
 
-    private void parseJoinAckMessage(JoinAckMessage msg) {
-        logger.log(Level.FINE, "Join ack received, opening connection to new peer");
+    private void parseJoinAckMessage(JoinAckMessage msg) throws IOException {
+        logger.log(Level.FINE, "JoinPeer ack, opening connection to new peer");
         logger.log(Level.FINE, "Peer IP: " + msg.getRandPeer());
         logger.log(Level.FINE, "Peer host port: " + msg.getHostPort());
 
-        try {
-            Socket s = new Socket(InetAddress.getByName(msg.getRandPeer()), msg.getHostPort());
-            Connection c = new Connection(this, s);
-            c.sendMessage(new JoinPeerMessage(this.id, serverThread.getPort()));
-        } catch (Exception e) {
-            logger.log(Level.SEVERE, "Exception occurred when parsing a join req: " + e);
-        }
+        Socket s = new Socket(InetAddress.getByName(msg.getRandPeer()), msg.getHostPort());
+        Connection c = new Connection(this, s);
+        System.out.println("Local addr is: " + c.getLocalAddr());
+        c.sendMessage(new JoinPeerMessage(this.id, c.getLocalAddr(), c.getLocalPort()));
     }
 
-    private void parseJoinPeerMessage(JoinPeerMessage msg) {
-        logger.log(Level.FINE, "Join peer message received.");
+    private void parseJoinPeerMessage(JoinPeerMessage msg) throws IOException {
         logger.log(Level.FINE, "Joining peer ID: " + msg.getId());
-        logger.log(Level.FINE, "Peer host port: " + msg.getHostPort());
+        logger.log(Level.FINE, "Joining peer addr: " + msg.getAddr());
+        logger.log(Level.FINE, "Peer connection port: " + msg.getPort());
 
-        routingTable.findClosest(msg.getId());
+        Connection c = connectionMap.get(msg.getAddr() + "_" + msg.getPort());
+        c.sendMessage(new JoinPeerAckMessage());
+    }
+
+    private void parseJoinPeerAckMessage(JoinPeerAckMessage msg) {
+
     }
 
 }

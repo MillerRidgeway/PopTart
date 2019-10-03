@@ -44,6 +44,6 @@ public class Util {
             if (id1.charAt(i) != id2.charAt(i))
                 return i;
         }
-        return 0;
+        return -1;
     }
 }
