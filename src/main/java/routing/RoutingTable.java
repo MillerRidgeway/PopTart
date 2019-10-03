@@ -4,21 +4,26 @@ import peer.MemberPeer;
 import peer.Util;
 
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 public class RoutingTable {
     private ArrayList<ArrayList<String>> idTable = new ArrayList<>();
-    private ArrayList<ArrayList<String>> connectionTable = new ArrayList<>();
+    private Map<String, String> idConnectionMap = new ConcurrentHashMap<>();
     private MemberPeer owner;
 
     public RoutingTable(MemberPeer owner) {
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 16; j++) {
                 idTable.get(i).add("DEFAULT");
-                connectionTable.get(i).add("DEFAULT_ADDR");
             }
         }
         this.owner = owner;
+    }
+
+    public String findClosestIp(String id) {
+        return idConnectionMap.get(id);
     }
 
     public String findClosest(String id) {
@@ -37,15 +42,12 @@ public class RoutingTable {
                 }
             }
         }
-        if (closestIndex == 20) {
-            //TODO - Set the leafset nodes because there is a blank row
-            //TODO - Maybe also insert to the row not sure yet
-            return "";
-        } else
-            return idTable.get(rowIndex).get(closestIndex);
+        //TODO - Set the leafset nodes because there is a blank row
+        //TODO - Maybe also insert to the row not sure yet
+        return idTable.get(rowIndex).get(closestIndex);
     }
 
-    public void insertNewPeer(String id) {
+    public void insertNewPeer(String id, String addr, int port) {
 
     }
 

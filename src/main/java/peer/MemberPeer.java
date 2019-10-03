@@ -23,7 +23,7 @@ public class MemberPeer implements Peer {
 
     private ServerThread serverThread;
     private String id;
-    private Map<String, Connection> connectionMap = new ConcurrentHashMap<>();
+    private Map<String, Connection> ipConnectionMap = new ConcurrentHashMap<>();
     public LeafSet leafSet;
     private RoutingTable routingTable;
     private static final Logger logger = Logger.getLogger(DiscoveryPeer.class.getName());
@@ -104,7 +104,7 @@ public class MemberPeer implements Peer {
 
 
     public void addNewConnection(Connection c) {
-        connectionMap.put(c.getAddr() + "_" + c.getPort(), c);
+        ipConnectionMap.put(c.getAddr() + "_" + c.getPort(), c);
     }
 
     private String getTimestampId() {
@@ -132,26 +132,27 @@ public class MemberPeer implements Peer {
 
     private void parseJoinAckMessage(JoinAckMessage msg) throws IOException {
         logger.log(Level.FINE, "JoinPeer ack, opening connection to new peer");
-        logger.log(Level.FINE, "Peer IP: " + msg.getRandPeer());
-        logger.log(Level.FINE, "Peer host port: " + msg.getHostPort());
+        logger.log(Level.FINE, "Connecting to IP: " + msg.getRandPeer());
+        logger.log(Level.FINE, "Connecting to port: " + msg.getHostPort());
 
         Socket s = new Socket(InetAddress.getByName(msg.getRandPeer()), msg.getHostPort());
         Connection c = new Connection(this, s);
-        System.out.println("Local addr is: " + c.getLocalAddr());
         c.sendMessage(new JoinPeerMessage(this.id, c.getLocalAddr(), c.getLocalPort()));
     }
 
     private void parseJoinPeerMessage(JoinPeerMessage msg) throws IOException {
-        logger.log(Level.FINE, "Joining peer ID: " + msg.getId());
-        logger.log(Level.FINE, "Joining peer addr: " + msg.getAddr());
-        logger.log(Level.FINE, "Peer connection port: " + msg.getPort());
+        logger.log(Level.FINE, "Got join request from peer w/ ID: " + msg.getId());
+        logger.log(Level.FINE, "Join request is from: " + msg.getAddr());
+        logger.log(Level.FINE, "Join request is from port: " + msg.getPort());
 
-        Connection c = connectionMap.get(msg.getAddr() + "_" + msg.getPort());
+
+        //routingTable.findClosestIp(routingTable.findClosest(msg.getId()));
+
+        Connection c = ipConnectionMap.get(msg.getAddr() + "_" + msg.getPort());
         c.sendMessage(new JoinPeerAckMessage());
     }
 
     private void parseJoinPeerAckMessage(JoinPeerAckMessage msg) {
-
     }
 
 }
