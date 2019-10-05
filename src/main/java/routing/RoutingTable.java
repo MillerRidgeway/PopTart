@@ -42,9 +42,11 @@ public class RoutingTable {
                 }
             }
         }
-        //TODO - Set the leafset nodes because there is a blank row
-        //TODO - Maybe also insert to the row not sure yet
         return idTable.get(rowIndex).get(closestIndex);
+    }
+
+    public ArrayList<String> getRow(int rowIndex) {
+        return idTable.get(rowIndex);
     }
 
     public void insertNewPeer(String id, String addr, int port) {

@@ -52,8 +52,8 @@ public class DiscoveryPeer implements Peer {
                 case "list-nodes":
                     for (Map.Entry<String, Connection> e : connectionMap.entrySet()) {
                         System.out.println("Connected node: " + e.getValue().toString());
-                        break;
                     }
+                    break;
                 default:
                     System.out.println("Unknown command.");
                     break;
@@ -70,7 +70,7 @@ public class DiscoveryPeer implements Peer {
 
     @Override
     public String getId() {
-        return "Discovery Peer";
+        return "DiscoveryPeer";
     }
 
     @Override

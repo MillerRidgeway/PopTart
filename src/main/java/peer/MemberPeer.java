@@ -10,7 +10,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,6 +37,7 @@ public class MemberPeer implements Peer {
         else
             this.id = id;
         leafSet = new LeafSet("", "", "", "");
+        System.out.println("My node id is: " + this.id);
 
         //Server thread
         ServerSocket ss = new ServerSocket(0);
@@ -58,7 +58,7 @@ public class MemberPeer implements Peer {
         logger.addHandler(fh);
         logger.setLevel(Level.FINE);
 
-        //startConsole();
+        startConsole();
     }
 
     public static void main(String[] args) throws Exception {
@@ -72,9 +72,23 @@ public class MemberPeer implements Peer {
 
     private void startConsole() {
         Scanner scn = new Scanner(System.in);
-        System.out.println("Please enter a command: ");
-        String command = scn.nextLine();
-        System.out.println("The command was: " + command);
+        while (true) {
+            System.out.println("Please enter a command: ");
+            String command = scn.nextLine();
+            switch (command) {
+                case "list-nodes":
+                    for (Map.Entry<String, Connection> e : ipConnectionMap.entrySet()) {
+                        System.out.println("Connected node: " + e.getValue().toString());
+                    }
+                    break;
+                case "leaf-set":
+                    System.out.println("Leafset is: " + leafSet);
+                    break;
+                default:
+                    System.out.println("Unknown command.");
+                    break;
+            }
+        }
     }
 
     @Override
@@ -91,9 +105,9 @@ public class MemberPeer implements Peer {
         } else if (msg instanceof JoinPeerMessage) { // Being contacted by another peer to join
             logger.log(Level.FINE, "Got peer join.");
             parseJoinPeerMessage((JoinPeerMessage) msg);
-        } else if (msg instanceof JoinPeerAckMessage) { //Got response for join req, forward or stop if closest.
-            logger.log(Level.FINE, "Got forward/response to join.");
-            parseJoinPeerAckMessage((JoinPeerAckMessage) msg);
+        } else if (msg instanceof UpdateLeafSetMessage) {
+            logger.log(Level.FINE, "Got forward request/response to join from existing peer.");
+            parseUpdateLeafSetMessage((UpdateLeafSetMessage) msg);
         }
     }
 
@@ -118,6 +132,7 @@ public class MemberPeer implements Peer {
 
         String randId = getTimestampId();
         this.id = randId;
+        System.out.println("My new ID is: " + this.id);
         DiscoverMessage dm = new DiscoverMessage(randId, discoveryConnection.getAddr(), serverThread.getPort(),
                 discoveryConnection.getLocalPort());
         discoveryConnection.sendMessage(dm);
@@ -134,32 +149,63 @@ public class MemberPeer implements Peer {
 
         Socket s = new Socket(InetAddress.getByName(msg.getRandPeer()), msg.getHostPort());
         Connection c = new Connection(this, s);
-        c.sendMessage(new JoinPeerMessage(this.id, c.getLocalAddr(), c.getLocalPort()));
+        c.sendMessage(new JoinPeerMessage(this.id, c.getLocalAddr(), c.getLocalPort(), this.leafSet));
     }
 
-    private void parseJoinPeerMessage(JoinPeerMessage msg) throws IOException {
+    private synchronized void parseJoinPeerMessage(JoinPeerMessage msg) throws IOException {
         logger.log(Level.FINE, "Got join request from peer w/ ID: " + msg.getId());
         logger.log(Level.FINE, "Join request is from: " + msg.getAddr());
         logger.log(Level.FINE, "Join request is from port: " + msg.getPort());
+        logger.log(Level.FINE, "Leafset of joining peer is currently: " + msg.getLeafSet());
 
         Connection c = ipConnectionMap.get(msg.getAddr() + "_" + msg.getPort());
 
 
+//        if (leafSet.contains(msg.getId())) {
+//            c.sendMessage(new DestinationFoundMessage());
+//        }
+        LeafSet newSet = null;
         if (leafSet.isEmpty()) {
-            this.leafSet.setHi(msg.getId(), msg.getAddr() + "_" + msg.getPort());
-            this.leafSet.setLo(msg.getId(), msg.getAddr() + "_" + msg.getPort());
-            c.sendMessage(new JoinPeerAckMessage());
-        }
+            String addrPort = c.getLocalAddr() + "_" + c.getLocalPort();
+            logger.log(Level.FINE, "New leafset is:\n" + leafSet);
+            newSet = new LeafSet(this.id, this.id, addrPort, addrPort);
+            c.sendMessage(new UpdateLeafSetMessage(newSet));
 
-        if (leafSet.contains(msg.getId())) {
-            c.sendMessage(new DestinationFoundMessage());
+            leafSet.setHi(msg.getId(), msg.getAddr() + "_" + msg.getPort());
+            leafSet.setLo(msg.getId(), msg.getAddr() + "_" + msg.getPort());
+        } else if (leafSet.getHi().equals(leafSet.getLo())) {
+            if (Util.getNumericalDifference(this.id, msg.getId()) > 0
+                    && Util.getNumericalDifference(this.getId(), leafSet.getLo()) > 0) { //Incoming is low
+                newSet = new LeafSet(this.id, leafSet.getHi(), leafSet.getHiAddr(), c.getLocalAddr());
+                c.sendMessage(new UpdateLeafSetMessage(newSet));
+
+                leafSet.setLo(msg.getId(), msg.getAddr());
+            } else if (Util.getNumericalDifference(this.id, msg.getId()) < 0
+                    && Util.getNumericalDifference(leafSet.getHi(), msg.getId()) < 0) { //Incoming is high
+                newSet = new LeafSet(leafSet.getLo(), this.id, leafSet.getLoAddr(), c.getLocalAddr());
+                c.sendMessage(new UpdateLeafSetMessage(newSet));
+
+                leafSet.setHi(msg.getId(), msg.getAddr());
+            } else { //Incoming is middle
+                if (Util.getNumericalDifference(this.id, msg.getId()) < 0) {
+                    newSet = new LeafSet(leafSet.getLo(), this.id, leafSet.getHiAddr(), c.getLocalAddr());
+                    leafSet.setHi(msg.getId(), msg.getAddr());
+                } else {
+                    newSet = new LeafSet(this.id, leafSet.getLo(), c.getLocalAddr(), leafSet.getLoAddr());
+                    leafSet.setLo(msg.getId(), msg.getAddr());
+                }
+                c.sendMessage(new UpdateLeafSetMessage(newSet));
+            }
         }
         //routingTable.findClosestIp(routingTable.findClosest(msg.getId()));
-
-
     }
 
-    private void parseJoinPeerAckMessage(JoinPeerAckMessage msg) {
+    private void parseUpdateLeafSetMessage(UpdateLeafSetMessage msg) {
+        logger.log(Level.FINE, "New leafset is:\n" + msg.getResponseLeaf());
+        logger.log(Level.FINE, "Changing leaf set to reflect updated version");
+
+        this.leafSet = msg.getResponseLeaf();
+        logger.log(Level.FINE, "New leafset is:\n" + leafSet);
     }
 
 }

@@ -33,7 +33,7 @@ public class Connection {
 
     @Override
     public String toString() {
-        return p.getId() + "-" + getAddr() + "_" + getPort();
+        return getAddr() + "_" + getPort();
     }
 
     public String getAddr() {

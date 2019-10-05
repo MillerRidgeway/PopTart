@@ -4,7 +4,7 @@ import peer.Peer;
 
 import java.io.Serializable;
 
-public class LeafSet {
+public class LeafSet implements Serializable {
     private String hi, lo, hiAddr, loAddr;
 
     public LeafSet(String hi, String lo, String hiAddr, String loAddr) {

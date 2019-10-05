@@ -46,4 +46,11 @@ public class Util {
         }
         return -1;
     }
+
+    public static int getNumericalDifference(String id1, String id2) {
+        int parsedId1 = Integer.parseInt(id1, 16);
+        int parsedId2 = Integer.parseInt(id2, 16);
+
+        return parsedId1 - parsedId2;
+    }
 }
