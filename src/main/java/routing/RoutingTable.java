@@ -4,53 +4,63 @@ import peer.MemberPeer;
 import peer.Util;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 
 public class RoutingTable {
-    private ArrayList<ArrayList<String>> idTable = new ArrayList<>();
+    private ArrayList<List<String>> idTable = new ArrayList<>(4);
     private Map<String, String> idConnectionMap = new ConcurrentHashMap<>();
     private MemberPeer owner;
 
     public RoutingTable(MemberPeer owner) {
         for (int i = 0; i < 4; i++) {
+            idTable.add(new ArrayList<>());
             for (int j = 0; j < 16; j++) {
                 idTable.get(i).add("DEFAULT");
             }
         }
+        idConnectionMap.put("EMPTY_ROW", "EMPTY_ROW");
         this.owner = owner;
     }
 
-    public String findClosestIp(String id) {
-        return idConnectionMap.get(id);
+    public String findClosestIp(String id, String addr, int hostPort) {
+        return idConnectionMap.get(findClosest(id, addr, hostPort));
     }
 
-    public String findClosest(String id) {
+    public String findClosest(String id, String addr, int hostPort) {
         int rowIndex = Util.getIdDifference(owner.getId(), id);
-        if (rowIndex == -1) //Arrived at the closest node
-            return owner.getId();
         int closestIndex = 20; //Some value > 16 (hex max value value)
         for (int i = 0; i < 16; i++) {
             String entry = idTable.get(rowIndex).get(i);
-            if (!entry.isEmpty()) {
-                int idDigit = Character.digit(id.charAt(rowIndex), 16);
-                int tableDigit = Character.digit(entry.charAt(rowIndex), 16);
+            int idDigit = Character.digit(id.charAt(rowIndex), 16);
+            int tableDigit = Character.digit(entry.charAt(rowIndex), 16);
+            if (!entry.equals("DEFAULT")) {
                 int diff = Math.abs(tableDigit - idDigit);
                 if (diff < closestIndex) {
                     closestIndex = i;
                 }
+            } else if (idDigit == i) {
+                insertNewPeer(id, addr, hostPort);
             }
         }
-        return idTable.get(rowIndex).get(closestIndex);
+
+        if (closestIndex == 20)
+            return "EMPTY_ROW";
+        else
+            return idTable.get(rowIndex).get(closestIndex);
     }
 
-    public ArrayList<String> getRow(int rowIndex) {
+    public List<String> getRow(int rowIndex) {
         return idTable.get(rowIndex);
     }
 
     public void insertNewPeer(String id, String addr, int port) {
-
+        int rowIndex = Util.getIdDifference(owner.getId(), id);
+        int colIndex = Character.digit(id.charAt(rowIndex), 16);
+        idTable.get(rowIndex).set(colIndex, id);
+        idConnectionMap.put(id, addr + "_" + port);
     }
 
     @Override

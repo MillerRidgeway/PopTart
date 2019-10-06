@@ -37,6 +37,7 @@ public class MemberPeer implements Peer {
         else
             this.id = id;
         leafSet = new LeafSet("", "", "", "");
+        routingTable = new RoutingTable(this);
         System.out.println("My node id is: " + this.id);
 
         //Server thread
@@ -84,6 +85,9 @@ public class MemberPeer implements Peer {
                 case "leaf-set":
                     System.out.println("Leafset is: " + leafSet);
                     break;
+                case "routing-table":
+                    System.out.println("Table is: \n" + routingTable);
+                    break;
                 default:
                     System.out.println("Unknown command.");
                     break;
@@ -105,6 +109,9 @@ public class MemberPeer implements Peer {
         } else if (msg instanceof JoinPeerMessage) { // Being contacted by another peer to join
             logger.log(Level.FINE, "Got peer join.");
             parseJoinPeerMessage((JoinPeerMessage) msg);
+        } else if (msg instanceof ForwardToMessage) {
+            logger.log(Level.FINE, "Got response to forward");
+            parseForwardToMessage((ForwardToMessage) msg);
         } else if (msg instanceof UpdateLeafSetMessage) {
             logger.log(Level.FINE, "Got forward request/response to join from existing peer.");
             parseUpdateLeafSetMessage((UpdateLeafSetMessage) msg);
@@ -153,13 +160,55 @@ public class MemberPeer implements Peer {
                 serverThread.getPort(), this.leafSet));
     }
 
-    private synchronized void parseJoinPeerMessage(JoinPeerMessage msg) throws IOException {
+    private void parseJoinPeerMessage(JoinPeerMessage msg) throws IOException {
         logger.log(Level.FINE, "Got join request from peer w/ ID: " + msg.getId());
         logger.log(Level.FINE, "Join request is from: " + msg.getAddr());
         logger.log(Level.FINE, "Join request is from port: " + msg.getPort());
         logger.log(Level.FINE, "Host port of joining peer is: " + msg.getHostPort());
         logger.log(Level.FINE, "Leafset of joining peer is currently: " + msg.getLeafSet());
 
+        Connection joiningPeerConnection = ipConnectionMap.get(msg.getAddr() + "_" + msg.getPort());
+
+        int difference = Util.getIdDifference(this.getId(), msg.getId());
+        String closestId = routingTable.findClosest(msg.getId(), msg.getAddr(), msg.getHostPort());
+        String closestIp = routingTable.findClosestIp(msg.getId(), msg.getAddr(), msg.getHostPort());
+
+        if (leafSet.contains(msg.getId())) {
+            //TODO - Forward to node w/ DestinationFoundMessage
+        } else if (!closestId.equals("EMPTY_ROW")) {
+            joiningPeerConnection.sendMessage(
+                    new ForwardToMessage(closestId, closestIp, routingTable.getRow(difference)));
+        } else {
+            routingTable.insertNewPeer(msg.getId(), msg.getAddr(), msg.getHostPort());
+            //routeByLeafSet(msg);
+        }
+    }
+
+    private void parseForwardToMessage(ForwardToMessage msg) throws IOException {
+        logger.log(Level.FINE, "Connecting to IP: " + msg.getDestIp());
+        logger.log(Level.FINE, "Connecting to port: " + msg.getDestHostPort());
+
+        Socket s = new Socket(InetAddress.getByName(msg.getDestId()), msg.getDestHostPort());
+        Connection c = new Connection(this, s);
+        c.sendMessage(new JoinPeerMessage(this.id, c.getLocalAddr(), c.getLocalPort(),
+                serverThread.getPort(), this.leafSet));
+    }
+
+    private void parseUpdateLeafSetMessage(UpdateLeafSetMessage msg) {
+        logger.log(Level.FINE, "New leafset is:\n" + msg.getResponseLeaf());
+        logger.log(Level.FINE, "Changing leaf set to reflect updated version");
+
+        if (msg.getResponseLeaf().getHi().equals("current"))
+            this.leafSet.setLo(msg.getResponseLeaf().getLo(), msg.getResponseLeaf().getLoAddr());
+        else if (msg.getResponseLeaf().getLo().equals("current"))
+            this.leafSet.setHi(msg.getResponseLeaf().getHi(), msg.getResponseLeaf().getHiAddr());
+        else
+            this.leafSet = msg.getResponseLeaf();
+
+        logger.log(Level.FINE, "New leafset is:\n" + leafSet);
+    }
+
+    private synchronized void routeByLeafSet(JoinPeerMessage msg) throws IOException {
         Connection joiningPeerConnection = ipConnectionMap.get(msg.getAddr() + "_" + msg.getPort());
 
         LeafSet newSet = null;
@@ -235,6 +284,7 @@ public class MemberPeer implements Peer {
                 }
                 joiningPeerConnection.sendMessage(new UpdateLeafSetMessage(newSet));
             } else { //Incoming is middle
+
                 if (Util.getNumericalDifference(this.id, msg.getId()) < 0) {
                     newSet = new LeafSet(leafSet.getHi(),
                             this.id,
@@ -265,22 +315,4 @@ public class MemberPeer implements Peer {
         }
     }
 
-    private void parseUpdateLeafSetMessage(UpdateLeafSetMessage msg) {
-        logger.log(Level.FINE, "New leafset is:\n" + msg.getResponseLeaf());
-        logger.log(Level.FINE, "Changing leaf set to reflect updated version");
-
-        if (msg.getResponseLeaf().getHi().equals("current"))
-            this.leafSet.setLo(msg.getResponseLeaf().getLo(), msg.getResponseLeaf().getLoAddr());
-        else if (msg.getResponseLeaf().getLo().equals("current"))
-            this.leafSet.setHi(msg.getResponseLeaf().getHi(), msg.getResponseLeaf().getHiAddr());
-        else
-            this.leafSet = msg.getResponseLeaf();
-
-        logger.log(Level.FINE, "New leafset is:\n" + leafSet);
-    }
-
 }
-
-
-
-
