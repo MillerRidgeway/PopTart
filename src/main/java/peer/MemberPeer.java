@@ -149,62 +149,133 @@ public class MemberPeer implements Peer {
 
         Socket s = new Socket(InetAddress.getByName(msg.getRandPeer()), msg.getHostPort());
         Connection c = new Connection(this, s);
-        c.sendMessage(new JoinPeerMessage(this.id, c.getLocalAddr(), c.getLocalPort(), this.leafSet));
+        c.sendMessage(new JoinPeerMessage(this.id, c.getLocalAddr(), c.getLocalPort(),
+                serverThread.getPort(), this.leafSet));
     }
 
     private synchronized void parseJoinPeerMessage(JoinPeerMessage msg) throws IOException {
         logger.log(Level.FINE, "Got join request from peer w/ ID: " + msg.getId());
         logger.log(Level.FINE, "Join request is from: " + msg.getAddr());
         logger.log(Level.FINE, "Join request is from port: " + msg.getPort());
+        logger.log(Level.FINE, "Host port of joining peer is: " + msg.getHostPort());
         logger.log(Level.FINE, "Leafset of joining peer is currently: " + msg.getLeafSet());
 
-        Connection c = ipConnectionMap.get(msg.getAddr() + "_" + msg.getPort());
+        Connection joiningPeerConnection = ipConnectionMap.get(msg.getAddr() + "_" + msg.getPort());
 
-
-//        if (leafSet.contains(msg.getId())) {
-//            c.sendMessage(new DestinationFoundMessage());
-//        }
         LeafSet newSet = null;
+        String msgAddrPort = msg.getAddr() + "_" + msg.getHostPort();
+        String thisAddrPort = joiningPeerConnection.getLocalAddr() + "_" + serverThread.getPort();
         if (leafSet.isEmpty()) {
-            String addrPort = c.getLocalAddr() + "_" + c.getLocalPort();
+            String addrPort = joiningPeerConnection.getLocalAddr() + "_" + joiningPeerConnection.getLocalPort();
             logger.log(Level.FINE, "New leafset is:\n" + leafSet);
             newSet = new LeafSet(this.id, this.id, addrPort, addrPort);
-            c.sendMessage(new UpdateLeafSetMessage(newSet));
+            joiningPeerConnection.sendMessage(new UpdateLeafSetMessage(newSet));
 
-            leafSet.setHi(msg.getId(), msg.getAddr() + "_" + msg.getPort());
-            leafSet.setLo(msg.getId(), msg.getAddr() + "_" + msg.getPort());
-        } else if (leafSet.getHi().equals(leafSet.getLo())) {
+            leafSet.setHi(msg.getId(), msgAddrPort);
+            leafSet.setLo(msg.getId(), msgAddrPort);
+        } else {
+            LeafSet otherLeafSet = null;
             if (Util.getNumericalDifference(this.id, msg.getId()) > 0
-                    && Util.getNumericalDifference(this.getId(), leafSet.getLo()) > 0) { //Incoming is low
-                newSet = new LeafSet(this.id, leafSet.getHi(), leafSet.getHiAddr(), c.getLocalAddr());
-                c.sendMessage(new UpdateLeafSetMessage(newSet));
+                    && Util.getNumericalDifference(leafSet.getLo(), msg.getId()) > 0) { //Incoming is low
 
-                leafSet.setLo(msg.getId(), msg.getAddr());
+                if (Util.getNumericalDifference(this.id, leafSet.getHi()) < 0) { //"this" is middle node - wrapped
+                    newSet = new LeafSet(this.id,
+                            leafSet.getHi(),
+                            thisAddrPort,
+                            leafSet.getFullHi());
+
+                    otherLeafSet = new LeafSet(msg.getId(), "current", msgAddrPort, "current");
+                    Socket s = new Socket(InetAddress.getByName(leafSet.getHiAddr()), leafSet.getHiPort());
+                    Connection otherConnection = new Connection(this, s);
+                    otherConnection.sendMessage(new UpdateLeafSetMessage(otherLeafSet));
+
+                    leafSet.setLo(msg.getId(), msgAddrPort);
+                } else { //"this" is high node
+                    newSet = new LeafSet(leafSet.getLo(),
+                            this.id,
+                            leafSet.getFullLo(),
+                            thisAddrPort);
+
+                    otherLeafSet = new LeafSet("current", msg.getId(), "current", msg.getAddr());
+                    Socket s = new Socket(InetAddress.getByName(leafSet.getLoAddr()), leafSet.getLoPort());
+                    Connection otherConnection = new Connection(this, s);
+                    otherConnection.sendMessage(new UpdateLeafSetMessage(otherLeafSet));
+
+                    leafSet.setHi(msg.getId(), msgAddrPort);
+                }
+                joiningPeerConnection.sendMessage(new UpdateLeafSetMessage(newSet));
+
             } else if (Util.getNumericalDifference(this.id, msg.getId()) < 0
                     && Util.getNumericalDifference(leafSet.getHi(), msg.getId()) < 0) { //Incoming is high
-                newSet = new LeafSet(leafSet.getLo(), this.id, leafSet.getLoAddr(), c.getLocalAddr());
-                c.sendMessage(new UpdateLeafSetMessage(newSet));
 
-                leafSet.setHi(msg.getId(), msg.getAddr());
+                if (Util.getNumericalDifference(this.id, leafSet.getHi()) < 0) { //"this" is new lo - wrapped
+                    newSet = new LeafSet(this.id,
+                            leafSet.getHi(),
+                            thisAddrPort,
+                            leafSet.getFullHi());
+
+                    otherLeafSet = new LeafSet(msg.getId(), "current", msgAddrPort, "current");
+                    Socket s = new Socket(InetAddress.getByName(leafSet.getHiAddr()), leafSet.getHiPort());
+                    Connection otherConnection = new Connection(this, s);
+                    otherConnection.sendMessage(new UpdateLeafSetMessage(otherLeafSet));
+
+                    leafSet.setLo(msg.getId(), msgAddrPort);
+                } else {//"this" is high node
+                    newSet = new LeafSet(leafSet.getLo(),
+                            this.id,
+                            leafSet.getFullLo(),
+                            thisAddrPort);
+
+                    otherLeafSet = new LeafSet("current", msg.getId(), "current", msgAddrPort);
+                    Socket s = new Socket(InetAddress.getByName(leafSet.getLoAddr()), leafSet.getLoPort());
+                    Connection otherConnection = new Connection(this, s);
+                    otherConnection.sendMessage(new UpdateLeafSetMessage(otherLeafSet));
+
+                    leafSet.setHi(msg.getId(), msgAddrPort);
+                }
+                joiningPeerConnection.sendMessage(new UpdateLeafSetMessage(newSet));
             } else { //Incoming is middle
                 if (Util.getNumericalDifference(this.id, msg.getId()) < 0) {
-                    newSet = new LeafSet(leafSet.getLo(), this.id, leafSet.getHiAddr(), c.getLocalAddr());
+                    newSet = new LeafSet(leafSet.getHi(),
+                            this.id,
+                            leafSet.getFullHi(),
+                            thisAddrPort);
+
+                    otherLeafSet = new LeafSet("current", msg.getId(), "current", msgAddrPort);
+                    Socket s = new Socket(InetAddress.getByName(leafSet.getHiAddr()), leafSet.getHiPort());
+                    Connection otherConnection = new Connection(this, s);
+                    otherConnection.sendMessage(new UpdateLeafSetMessage(otherLeafSet));
+
                     leafSet.setHi(msg.getId(), msg.getAddr());
                 } else {
-                    newSet = new LeafSet(this.id, leafSet.getLo(), c.getLocalAddr(), leafSet.getLoAddr());
-                    leafSet.setLo(msg.getId(), msg.getAddr());
+                    newSet = new LeafSet(this.id,
+                            leafSet.getLo(),
+                            thisAddrPort,
+                            leafSet.getFullLo());
+
+                    otherLeafSet = new LeafSet(msg.getId(), "current", msgAddrPort, "current");
+                    Socket s = new Socket(InetAddress.getByName(leafSet.getLoAddr()), leafSet.getLoPort());
+                    Connection otherConnection = new Connection(this, s);
+                    otherConnection.sendMessage(new UpdateLeafSetMessage(otherLeafSet));
+
+                    leafSet.setLo(msg.getId(), msgAddrPort);
                 }
-                c.sendMessage(new UpdateLeafSetMessage(newSet));
+                joiningPeerConnection.sendMessage(new UpdateLeafSetMessage(newSet));
             }
         }
-        //routingTable.findClosestIp(routingTable.findClosest(msg.getId()));
     }
 
     private void parseUpdateLeafSetMessage(UpdateLeafSetMessage msg) {
         logger.log(Level.FINE, "New leafset is:\n" + msg.getResponseLeaf());
         logger.log(Level.FINE, "Changing leaf set to reflect updated version");
 
-        this.leafSet = msg.getResponseLeaf();
+        if (msg.getResponseLeaf().getHi().equals("current"))
+            this.leafSet.setLo(msg.getResponseLeaf().getLo(), msg.getResponseLeaf().getLoAddr());
+        else if (msg.getResponseLeaf().getLo().equals("current"))
+            this.leafSet.setHi(msg.getResponseLeaf().getHi(), msg.getResponseLeaf().getHiAddr());
+        else
+            this.leafSet = msg.getResponseLeaf();
+
         logger.log(Level.FINE, "New leafset is:\n" + leafSet);
     }
 

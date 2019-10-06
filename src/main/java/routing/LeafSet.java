@@ -22,12 +22,28 @@ public class LeafSet implements Serializable {
         return this.lo;
     }
 
-    public String getHiAddr() {
+    public String getFullHi(){
         return this.hiAddr;
     }
 
-    public String getLoAddr() {
+    public String getFullLo(){
         return this.loAddr;
+    }
+
+    public String getHiAddr() {
+        return this.hiAddr.split("_")[0];
+    }
+
+    public String getLoAddr() {
+        return this.loAddr.split("_")[0];
+    }
+
+    public int getHiPort() {
+        return Integer.parseInt(this.hiAddr.split("_")[1]);
+    }
+
+    public int getLoPort() {
+        return Integer.parseInt(this.loAddr.split("_")[1]);
     }
 
     public void setHi(String newHi, String newHiAddr) {
@@ -50,6 +66,7 @@ public class LeafSet implements Serializable {
 
     @Override
     public String toString() {
-        return "Hi: " + getHi() + " Lo: " + getLo();
+        return "Hi: " + getHi() + "-" + getFullHi() +
+                "\nLo: " + getLo() + "-" + getFullLo();
     }
 }
