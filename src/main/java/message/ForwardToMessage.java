@@ -4,13 +4,17 @@ import java.util.List;
 
 public class ForwardToMessage extends Message {
     private String destId, destIp;
-    private int destHostPort;
+    private int destHostPort, rowIndex;
     private List<String> tableRow;
 
-    public ForwardToMessage(String destId, String destIp, List<String> tableRow) {
+    public ForwardToMessage(String destId, String destIp, List<String> tableRow, int rowIndex) {
         this.destId = destId;
-        this.destIp = destIp.split("_")[0];
-        this.destHostPort = Integer.parseInt(destIp.split("_")[1]);
+        if (destIp.isEmpty()) {
+            this.destIp = "";
+        } else {
+            this.destIp = destIp.split("_")[0];
+            this.destHostPort = Integer.parseInt(destIp.split("_")[1]);
+        }
     }
 
     public int getDestHostPort() {
@@ -27,5 +31,9 @@ public class ForwardToMessage extends Message {
 
     public List<String> getTableRow() {
         return tableRow;
+    }
+
+    public int getRowIndex() {
+        return rowIndex;
     }
 }

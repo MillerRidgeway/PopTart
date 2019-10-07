@@ -21,7 +21,11 @@ public class RoutingTable {
                 idTable.get(i).add("DEFAULT");
             }
         }
-        idConnectionMap.put("EMPTY_ROW", "EMPTY_ROW");
+        for (int i = 0; i < owner.getId().length(); i++) {
+            int colIndex = Character.digit(owner.getId().charAt(i), 16);
+            idTable.get(i).set(colIndex, owner.getId());
+        }
+
         this.owner = owner;
     }
 
@@ -41,19 +45,20 @@ public class RoutingTable {
                 if (diff < closestIndex) {
                     closestIndex = i;
                 }
-            } else if (idDigit == i) {
-                insertNewPeer(id, addr, hostPort);
+            } else if (i == Character.digit(id.charAt(rowIndex), 16)) {
+                idTable.get(rowIndex).set(i, id);
+                idConnectionMap.put(id, addr + "_" + hostPort);
             }
         }
-
-        if (closestIndex == 20)
-            return "EMPTY_ROW";
-        else
-            return idTable.get(rowIndex).get(closestIndex);
+        return idTable.get(rowIndex).get(closestIndex);
     }
 
     public List<String> getRow(int rowIndex) {
         return idTable.get(rowIndex);
+    }
+
+    public void setRow(int index, List<String> row) {
+        idTable.set(index, row);
     }
 
     public void insertNewPeer(String id, String addr, int port) {
