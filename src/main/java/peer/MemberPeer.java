@@ -221,14 +221,15 @@ public class MemberPeer implements Peer {
 
         routingTable.setRow(msg.getRowIndex(), msg.getTableRow());
         routingTable.putIps(msg.getTableRow(), msg.getIps());
-        
+
         if (!msg.getDestIp().isEmpty()) {
             logger.log(Level.FINE, "There is a closer peer at: " + msg.getDestIp());
             logger.log(Level.FINE, "I am connecting to port: " + msg.getDestHostPort());
-//            Socket s = new Socket(InetAddress.getByName(msg.getDestId()), msg.getDestHostPort());
-//            Connection c = new Connection(this, s);
-//            c.sendMessage(new JoinPeerMessage(this.id, c.getLocalAddr(), c.getLocalPort(),
-//                    serverThread.getPort(), this.leafSet));
+            //System.out.println("Localhost is equal: " + "127.0.0.1".equals(msg.getDestIp()));
+            Socket s = new Socket(InetAddress.getByName(msg.getDestIp()), msg.getDestHostPort());
+            Connection c = new Connection(this, s);
+            c.sendMessage(new JoinPeerMessage(this.id, c.getLocalAddr(), c.getLocalPort(),
+                    serverThread.getPort(), this.leafSet));
         }
     }
 
