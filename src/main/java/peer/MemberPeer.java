@@ -39,6 +39,12 @@ public class MemberPeer implements Peer {
         leafSet = new LeafSet("", "", "", "");
         System.out.println("My node id is: " + this.id);
 
+        //Logger
+        fh = new FileHandler("memberPeer" + "_" + id + ".log");
+        fh.setFormatter(new SimpleFormatter());
+        logger.addHandler(fh);
+        logger.setLevel(Level.FINE);
+
         //Server thread
         ServerSocket ss = new ServerSocket(0);
         serverThread = new ServerThread(this, ss);
@@ -51,12 +57,6 @@ public class MemberPeer implements Peer {
         DiscoverMessage dm = new DiscoverMessage(id, discoveryConnection.getAddr(), serverThread.getPort(),
                 discoveryConnection.getLocalPort());
         discoveryConnection.sendMessage(dm);
-
-        //Logger
-        fh = new FileHandler("memberPeer" + "_" + id + ".log");
-        fh.setFormatter(new SimpleFormatter());
-        logger.addHandler(fh);
-        logger.setLevel(Level.FINE);
 
         //Routing table
         routingTable = new RoutingTable(this);
@@ -165,7 +165,7 @@ public class MemberPeer implements Peer {
                 serverThread.getPort(), this.leafSet));
     }
 
-    private void parseJoinPeerMessage(JoinPeerMessage msg) throws IOException {
+    private synchronized void parseJoinPeerMessage(JoinPeerMessage msg) throws IOException {
         logger.log(Level.FINE, "Got join request from peer w/ ID: " + msg.getId());
         logger.log(Level.FINE, "Join request is from: " + msg.getAddr());
         logger.log(Level.FINE, "Join request is from port: " + msg.getPort());
@@ -175,7 +175,7 @@ public class MemberPeer implements Peer {
 
         int rowIndex = Util.getIdDifference(this.getId(), msg.getId());
         String closestId = routingTable.findClosest(msg.getId());
-        String closestIp = routingTable.findClosestIp(msg.getId());
+        String closestIp = routingTable.findClosestIp(closestId);
 
         routingTable.insertNewPeer(msg.getId(), msg.getAddr(), msg.getHostPort());
 
@@ -190,12 +190,12 @@ public class MemberPeer implements Peer {
             int myDiff = Math.abs(Util.getNumericalDifference(this.id, msg.getId()));
 
             if (loDiff < myDiff) {
-                logger.log(Level.FINE, "Routing to low leaf: " + leafSet.getFullLo());
+                logger.log(Level.FINE, "My low leaf is closer at: " + leafSet.getFullLo());
                 logger.log(Level.FINE, "Sending row: " + routingTable.getRow(rowIndex));
                 joiningPeerConnection.sendMessage(new ForwardToMessage(leafSet.getLo(), leafSet.getFullLo(), rowIndex,
                         routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
             } else if (hiDiff < myDiff) {
-                logger.log(Level.FINE, "Routing to hi leaf: " + leafSet.getFullHi());
+                logger.log(Level.FINE, "My hi leaf is closer at: " + leafSet.getFullHi());
                 logger.log(Level.FINE, "Sending row: " + routingTable.getRow(rowIndex));
                 joiningPeerConnection.sendMessage(new ForwardToMessage(leafSet.getHi(), leafSet.getFullHi(), rowIndex,
                         routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
@@ -215,20 +215,20 @@ public class MemberPeer implements Peer {
         }
     }
 
-    private void parseForwardToMessage(ForwardToMessage msg) throws IOException {
+    private synchronized void parseForwardToMessage(ForwardToMessage msg) throws IOException {
         logger.log(Level.FINE, "Adding row from previous peer - row num is: " + msg.getRowIndex());
         logger.log(Level.FINE, "Row contents: " + msg.getTableRow());
 
         routingTable.setRow(msg.getRowIndex(), msg.getTableRow());
         routingTable.putIps(msg.getTableRow(), msg.getIps());
-
+        
         if (!msg.getDestIp().isEmpty()) {
             logger.log(Level.FINE, "There is a closer peer at: " + msg.getDestIp());
             logger.log(Level.FINE, "I am connecting to port: " + msg.getDestHostPort());
-            Socket s = new Socket(InetAddress.getByName(msg.getDestId()), msg.getDestHostPort());
-            Connection c = new Connection(this, s);
-            c.sendMessage(new JoinPeerMessage(this.id, c.getLocalAddr(), c.getLocalPort(),
-                    serverThread.getPort(), this.leafSet));
+//            Socket s = new Socket(InetAddress.getByName(msg.getDestId()), msg.getDestHostPort());
+//            Connection c = new Connection(this, s);
+//            c.sendMessage(new JoinPeerMessage(this.id, c.getLocalAddr(), c.getLocalPort(),
+//                    serverThread.getPort(), this.leafSet));
         }
     }
 
@@ -246,7 +246,7 @@ public class MemberPeer implements Peer {
     private synchronized void insertNewPeer(JoinPeerMessage msg) throws IOException {
         Connection joiningPeerConnection = ipConnectionMap.get(msg.getAddr() + "_" + msg.getPort());
 
-        LeafSet newSet = null;
+        LeafSet newSet;
         String msgAddrPort = msg.getAddr() + "_" + msg.getHostPort() + "_" + msg.getPort();
         String thisAddrPort = joiningPeerConnection.getLocalAddr() + "_" + serverThread.getPort()
                 + "_" + joiningPeerConnection.getLocalPort();

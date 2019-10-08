@@ -31,7 +31,7 @@ public class RoutingTable {
     }
 
     public String findClosestIp(String id) {
-        return idConnectionMap.get(findClosest(id));
+        return idConnectionMap.get(id);
     }
 
     public String findClosest(String id) {
