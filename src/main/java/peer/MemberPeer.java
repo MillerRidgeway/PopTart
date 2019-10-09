@@ -40,7 +40,7 @@ public class MemberPeer implements Peer {
         System.out.println("My node id is: " + this.id);
 
         //Logger
-        fh = new FileHandler("memberPeer" + "_" + id + ".log");
+        fh = new FileHandler("memberPeer" + "_" + this.id + ".log");
         fh.setFormatter(new SimpleFormatter());
         logger.addHandler(fh);
         logger.setLevel(Level.FINER);
@@ -54,7 +54,7 @@ public class MemberPeer implements Peer {
         //Discovery peer connection
         Socket s = new Socket(discoveryAddr, discoveryPort);
         discoveryConnection = new Connection(this, s);
-        DiscoverMessage dm = new DiscoverMessage(id, discoveryConnection.getAddr(), serverThread.getPort(),
+        DiscoverMessage dm = new DiscoverMessage(this.id, discoveryConnection.getAddr(), serverThread.getPort(),
                 discoveryConnection.getLocalPort());
         discoveryConnection.sendMessage(dm);
 
@@ -185,19 +185,20 @@ public class MemberPeer implements Peer {
                     routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
         } else if (closestId.equals(this.id)) { //Arrived at closest node, check leafs
             logger.log(Level.FINE, "Closest ID in my table is me.");
-            int hiDiff = Math.abs(Util.getNumericalDifference(leafSet.getHi(), msg.getId()));
-            int loDiff = Math.abs(Util.getNumericalDifference(leafSet.getLo(), msg.getId()));
-            int myDiff = Math.abs(Util.getNumericalDifference(this.id, msg.getId()));
-            logger.log(Level.FINER, "My diff is: " + myDiff);
-            logger.log(Level.FINER, "logDiff is: " + loDiff);
-            logger.log(Level.FINER, "hiDiff is: " + hiDiff);
+            int hiMatch = Util.getIdDifference(leafSet.getHi(), msg.getId());
+            int loMatch = Util.getIdDifference(leafSet.getLo(), msg.getId());
+            int myMatch = Util.getIdDifference(this.getId(), msg.getId());
+            logger.log(Level.FINER, "My diff is: " + myMatch);
+            logger.log(Level.FINER, "logDiff is: " + loMatch);
+            logger.log(Level.FINER, "hiDiff is: " + hiMatch);
 
-            if (loDiff < myDiff) {
-                logger.log(Level.FINE, "My low leaf is closer at: " + leafSet.getFullLo());
+            if (loMatch > myMatch) {
+                logger.log(Level.FINE, "My low leaf is closer at: "
+                        + leafSet.getFullLo() + " " + leafSet.getFullLo());
                 logger.log(Level.FINE, "Sending row: " + routingTable.getRow(rowIndex));
                 joiningPeerConnection.sendMessage(new ForwardToMessage(leafSet.getLo(), leafSet.getFullLo(), rowIndex,
                         routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
-            } else if (hiDiff < myDiff) {
+            } else if (hiMatch > myMatch) {
                 logger.log(Level.FINE, "My hi leaf is closer at: " + leafSet.getFullHi());
                 logger.log(Level.FINE, "Sending row: " + routingTable.getRow(rowIndex));
                 joiningPeerConnection.sendMessage(new ForwardToMessage(leafSet.getHi(), leafSet.getFullHi(), rowIndex,
@@ -297,7 +298,7 @@ public class MemberPeer implements Peer {
             } else if (Util.getNumericalDifference(this.id, msg.getId()) < 0
                     && Util.getNumericalDifference(leafSet.getHi(), msg.getId()) < 0) { //Incoming is high
 
-                if (Util.getNumericalDifference(this.id, leafSet.getHi()) < 0) { //"this" is new lo - wrapped
+                if (Util.getNumericalDifference(this.id, leafSet.getHi()) < 0) { //"this" is new lo
                     newSet = new LeafSet(this.id,
                             leafSet.getHi(),
                             thisAddrPort,
