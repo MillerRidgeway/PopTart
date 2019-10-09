@@ -53,4 +53,10 @@ public class Util {
 
         return parsedId1 - parsedId2;
     }
+
+    public static int getDigitDifference(String id1, String id2, int index) {
+        int id1DigitVal = Character.digit(id1.charAt(index), 16);
+        int id2DigitVal = Character.digit(id1.charAt(index), 16);
+        return Math.abs(id1DigitVal - id2DigitVal);
+    }
 }

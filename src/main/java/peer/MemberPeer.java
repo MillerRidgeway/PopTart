@@ -179,7 +179,7 @@ public class MemberPeer implements Peer {
 
         routingTable.insertNewPeer(msg.getId(), msg.getAddr(), msg.getHostPort());
 
-        if (leafSet.isEmpty()) {
+        if (leafSet.isEmpty()) { // Second node in the system
             insertNewPeer(msg);
             joiningPeerConnection.sendMessage(new ForwardToMessage("", "", rowIndex,
                     routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
@@ -188,6 +188,7 @@ public class MemberPeer implements Peer {
             int hiMatch = Util.getIdDifference(leafSet.getHi(), msg.getId());
             int loMatch = Util.getIdDifference(leafSet.getLo(), msg.getId());
             int myMatch = Util.getIdDifference(this.getId(), msg.getId());
+
             logger.log(Level.FINER, "My diff is: " + myMatch);
             logger.log(Level.FINER, "logDiff is: " + loMatch);
             logger.log(Level.FINER, "hiDiff is: " + hiMatch);
@@ -203,6 +204,23 @@ public class MemberPeer implements Peer {
                 logger.log(Level.FINE, "Sending row: " + routingTable.getRow(rowIndex));
                 joiningPeerConnection.sendMessage(new ForwardToMessage(leafSet.getHi(), leafSet.getFullHi(), rowIndex,
                         routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
+            } else if (loMatch == myMatch) {
+                int loDiff = Util.getDigitDifference(leafSet.getLo(), msg.getId(), loMatch);
+                int myDiff = Util.getDigitDifference(this.id, msg.getId(), myMatch);
+
+                if (loDiff < myDiff) {
+                    logger.log(Level.FINE, "My low leaf is closer at: "
+                            + leafSet.getFullLo() + " " + leafSet.getFullLo());
+                    logger.log(Level.FINE, "Sending row: " + routingTable.getRow(rowIndex));
+                    joiningPeerConnection.sendMessage(new ForwardToMessage(leafSet.getLo(), leafSet.getFullLo(), rowIndex,
+                            routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
+                } else {
+                    logger.log(Level.FINE, "Destination reached: " + this.id);
+                    logger.log(Level.FINE, "Sending row: " + routingTable.getRow(rowIndex));
+                    insertNewPeer(msg);
+                    joiningPeerConnection.sendMessage(new ForwardToMessage("", "", rowIndex,
+                            routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
+                }
             } else {
                 logger.log(Level.FINE, "Destination reached: " + this.id);
                 logger.log(Level.FINE, "Sending row: " + routingTable.getRow(rowIndex));
