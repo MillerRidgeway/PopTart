@@ -36,15 +36,17 @@ public class RoutingTable {
 
     public String findClosest(String id) {
         int rowIndex = Util.getIdDifference(owner.getId(), id);
-        int closestIndex = 20; //Some value > 16 (hex max value value)
+        int closestIndex = 0;
+        int closestDiff = 20;//Some value > 16 (hex max value value)
         for (int i = 0; i < 16; i++) {
             String entry = idTable.get(rowIndex).get(i);
             int idDigit = Character.digit(id.charAt(rowIndex), 16);
             int tableDigit = Character.digit(entry.charAt(rowIndex), 16);
             if (!entry.equals("DEFAULT")) {
                 int diff = Math.abs(tableDigit - idDigit);
-                if (diff < closestIndex) {
+                if (diff < closestDiff) {
                     closestIndex = i;
+                    closestDiff = diff;
                 }
             } else if (i == Character.digit(id.charAt(rowIndex), 16)) {
                 idTable.get(rowIndex).set(i, id);

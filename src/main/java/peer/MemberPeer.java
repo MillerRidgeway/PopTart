@@ -43,7 +43,7 @@ public class MemberPeer implements Peer {
         fh = new FileHandler("memberPeer" + "_" + id + ".log");
         fh.setFormatter(new SimpleFormatter());
         logger.addHandler(fh);
-        logger.setLevel(Level.FINE);
+        logger.setLevel(Level.FINER);
 
         //Server thread
         ServerSocket ss = new ServerSocket(0);
@@ -188,6 +188,9 @@ public class MemberPeer implements Peer {
             int hiDiff = Math.abs(Util.getNumericalDifference(leafSet.getHi(), msg.getId()));
             int loDiff = Math.abs(Util.getNumericalDifference(leafSet.getLo(), msg.getId()));
             int myDiff = Math.abs(Util.getNumericalDifference(this.id, msg.getId()));
+            logger.log(Level.FINER, "My diff is: " + myDiff);
+            logger.log(Level.FINER, "logDiff is: " + loDiff);
+            logger.log(Level.FINER, "hiDiff is: " + hiDiff);
 
             if (loDiff < myDiff) {
                 logger.log(Level.FINE, "My low leaf is closer at: " + leafSet.getFullLo());
@@ -225,11 +228,12 @@ public class MemberPeer implements Peer {
         if (!msg.getDestIp().isEmpty()) {
             logger.log(Level.FINE, "There is a closer peer at: " + msg.getDestIp());
             logger.log(Level.FINE, "I am connecting to port: " + msg.getDestHostPort());
-            //System.out.println("Localhost is equal: " + "127.0.0.1".equals(msg.getDestIp()));
             Socket s = new Socket(InetAddress.getByName(msg.getDestIp()), msg.getDestHostPort());
             Connection c = new Connection(this, s);
             c.sendMessage(new JoinPeerMessage(this.id, c.getLocalAddr(), c.getLocalPort(),
                     serverThread.getPort(), this.leafSet));
+        } else {
+            logger.log(Level.FINE, "Reached final destination.");
         }
     }
 
