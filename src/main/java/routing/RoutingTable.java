@@ -35,7 +35,7 @@ public class RoutingTable {
     }
 
     public String findClosest(String id) {
-        int rowIndex = Util.getIdDifference(owner.getId(), id);
+        int rowIndex = Util.getIdMatchingDigits(owner.getId(), id);
         int closestIndex = 0;
         int closestDiff = 20;//Some value > 16 (hex max value value)
         for (int i = 0; i < 16; i++) {
@@ -48,8 +48,6 @@ public class RoutingTable {
                     closestIndex = i;
                     closestDiff = diff;
                 }
-            } else if (i == Character.digit(id.charAt(rowIndex), 16)) {
-                idTable.get(rowIndex).set(i, id);
             }
         }
         return idTable.get(rowIndex).get(closestIndex);
@@ -78,7 +76,7 @@ public class RoutingTable {
     }
 
     public void insertNewPeer(String id, String addr, int port) {
-        int rowIndex = Util.getIdDifference(owner.getId(), id);
+        int rowIndex = Util.getIdMatchingDigits(owner.getId(), id);
         int colIndex = Character.digit(id.charAt(rowIndex), 16);
         idTable.get(rowIndex).set(colIndex, id);
         idConnectionMap.put(id, addr + "_" + port);

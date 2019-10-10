@@ -3,11 +3,12 @@ package message;
 import java.util.List;
 
 public class ForwardToMessage extends Message {
-    private String destId, destIp;
+    private String pitstop, destId, destIp;
     private int destHostPort, rowIndex;
     private List<String> tableRow, ips;
 
-    public ForwardToMessage(String destId, String destIp, int rowIndex, List<String> tableRow, List<String> ips) {
+    public ForwardToMessage(String pitstop, String destId, String destIp, int rowIndex, List<String> tableRow, List<String> ips) {
+        this.pitstop = pitstop;
         this.destId = destId;
         this.tableRow = tableRow;
         this.rowIndex = rowIndex;
@@ -22,6 +23,10 @@ public class ForwardToMessage extends Message {
 
     public List<String> getIps() {
         return ips;
+    }
+
+    public String getPitstop() {
+        return pitstop;
     }
 
     public int getDestHostPort() {

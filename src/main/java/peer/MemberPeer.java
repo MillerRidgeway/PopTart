@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,6 +26,7 @@ public class MemberPeer implements Peer {
     private Map<String, Connection> ipConnectionMap = new ConcurrentHashMap<>();
     private LeafSet leafSet;
     private RoutingTable routingTable;
+    private ArrayList<String> travelRoute;
     private static final Logger logger = Logger.getLogger(DiscoveryPeer.class.getName());
     private static FileHandler fh;
 
@@ -37,6 +39,7 @@ public class MemberPeer implements Peer {
         else
             this.id = id;
         leafSet = new LeafSet("", "", "", "");
+        travelRoute = new ArrayList<>();
         System.out.println("My node id is: " + this.id);
 
         //Logger
@@ -85,10 +88,13 @@ public class MemberPeer implements Peer {
                     }
                     break;
                 case "leaf-set":
-                    System.out.println("Leafset is: " + leafSet);
+                    System.out.println("Leafset is: \n" + leafSet);
                     break;
                 case "routing-table":
                     System.out.println("Table is: \n" + routingTable);
+                    break;
+                case "pathway":
+                    System.out.println("Took the path: " + this.travelRoute);
                     break;
                 default:
                     System.out.println("Unknown command.");
@@ -116,10 +122,10 @@ public class MemberPeer implements Peer {
             logger.log(Level.FINE, "Got peer join.");
             parseJoinPeerMessage((JoinPeerMessage) msg);
         } else if (msg instanceof ForwardToMessage) {
-            logger.log(Level.FINE, "Got response to forward");
+            logger.log(Level.FINE, "Got response to forward request");
             parseForwardToMessage((ForwardToMessage) msg);
         } else if (msg instanceof UpdateLeafSetMessage) {
-            logger.log(Level.FINE, "Got forward request/response to join from existing peer.");
+            logger.log(Level.FINE, "Got update leafset message");
             parseUpdateLeafSetMessage((UpdateLeafSetMessage) msg);
         }
     }
@@ -173,66 +179,58 @@ public class MemberPeer implements Peer {
 
         Connection joiningPeerConnection = ipConnectionMap.get(msg.getAddr() + "_" + msg.getPort());
 
-        int rowIndex = Util.getIdDifference(this.getId(), msg.getId());
-        String closestId = routingTable.findClosest(msg.getId());
-        String closestIp = routingTable.findClosestIp(closestId);
+        int rowIndex = Util.getIdMatchingDigits(this.getId(), msg.getId());
+        String closestByTable = routingTable.findClosest(msg.getId());
+        int msgAndMeDiff = Math.abs(Util.getNumericalDifference(this.id, msg.getId()));
+        int tableAndMsgDiff = Math.abs(Util.getNumericalDifference(closestByTable, msg.getId()));
 
+        String closestId;
+        if (msgAndMeDiff < tableAndMsgDiff)
+            closestId = this.id;
+        else
+            closestId = routingTable.findClosest(msg.getId());
+        String closestIp = routingTable.findClosestIp(closestId);
         routingTable.insertNewPeer(msg.getId(), msg.getAddr(), msg.getHostPort());
 
         if (leafSet.isEmpty()) { // Second node in the system
             insertNewPeer(msg);
-            joiningPeerConnection.sendMessage(new ForwardToMessage("", "", rowIndex,
+            joiningPeerConnection.sendMessage(new ForwardToMessage(this.id, "", "", rowIndex,
                     routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
         } else if (closestId.equals(this.id)) { //Arrived at closest node, check leafs
             logger.log(Level.FINE, "Closest ID in my table is me.");
-            int hiMatch = Util.getIdDifference(leafSet.getHi(), msg.getId());
-            int loMatch = Util.getIdDifference(leafSet.getLo(), msg.getId());
-            int myMatch = Util.getIdDifference(this.getId(), msg.getId());
 
-            logger.log(Level.FINER, "My diff is: " + myMatch);
-            logger.log(Level.FINER, "logDiff is: " + loMatch);
-            logger.log(Level.FINER, "hiDiff is: " + hiMatch);
+            int loDiff = Math.abs(Util.getNumericalDifference(leafSet.getLo(), msg.getId()));
+            int myDiff = Math.abs(Util.getNumericalDifference(this.id, msg.getId()));
+            int hiDiff = Math.abs(Util.getNumericalDifference(leafSet.getHi(), msg.getId()));
+            logger.log(Level.FINER, "My ID diff is: " + myDiff);
+            logger.log(Level.FINER, "Lo ID diff is: " + loDiff);
+            logger.log(Level.FINER, "Hi ID diff is: " + hiDiff);
 
-            if (loMatch > myMatch) {
+            if (loDiff < myDiff && loDiff <= hiDiff) {
                 sendToLoLeaf(joiningPeerConnection, rowIndex);
-            } else if (hiMatch > myMatch) {
+            } else if (hiDiff < myDiff) {
                 sendToHiLeaf(joiningPeerConnection, rowIndex);
-            } else if (loMatch == myMatch || hiMatch == myMatch) {
-                int loDiff = Util.getDigitDifference(leafSet.getLo(), msg.getId(), loMatch);
-                int myDiff = Util.getDigitDifference(this.id, msg.getId(), myMatch);
-                int hiDiff = Util.getDigitDifference(leafSet.getHi(), msg.getId(), hiMatch);
-
-                if (loDiff < myDiff && loDiff <= hiDiff) {
-                    sendToLoLeaf(joiningPeerConnection, rowIndex);
-                } else if (hiDiff < myDiff) {
-                    sendToHiLeaf(joiningPeerConnection, rowIndex);
-                } else {
-                    logger.log(Level.FINE, "Destination reached: " + this.id);
-                    logger.log(Level.FINE, "Sending row: " + routingTable.getRow(rowIndex));
-                    insertNewPeer(msg);
-                    joiningPeerConnection.sendMessage(new ForwardToMessage("", "", rowIndex,
-                            routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
-                }
             } else {
                 logger.log(Level.FINE, "Destination reached: " + this.id);
                 logger.log(Level.FINE, "Sending row: " + routingTable.getRow(rowIndex));
                 insertNewPeer(msg);
-                joiningPeerConnection.sendMessage(new ForwardToMessage("", "", rowIndex,
+                joiningPeerConnection.sendMessage(new ForwardToMessage(this.id, "", "", rowIndex,
                         routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
             }
 
         } else { //Route by DHT
             logger.log(Level.FINE, "My routing table has a closer peer: " + closestId + " " + closestIp);
             logger.log(Level.FINE, "Sending row: " + routingTable.getRow(rowIndex));
-            joiningPeerConnection.sendMessage(new ForwardToMessage(closestId, closestIp, rowIndex,
+            joiningPeerConnection.sendMessage(new ForwardToMessage(this.id, closestId, closestIp, rowIndex,
                     routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
         }
     }
 
     private synchronized void parseForwardToMessage(ForwardToMessage msg) throws IOException {
-        logger.log(Level.FINE, "Adding row from previous peer - row num is: " + msg.getRowIndex());
+        logger.log(Level.FINE, "Adding row from " + msg.getPitstop() + " - row num is: " + msg.getRowIndex());
         logger.log(Level.FINE, "Row contents: " + msg.getTableRow());
 
+        travelRoute.add(msg.getPitstop());
         routingTable.setRow(msg.getRowIndex(), msg.getTableRow());
         routingTable.putIps(msg.getTableRow(), msg.getIps());
 
@@ -250,6 +248,7 @@ public class MemberPeer implements Peer {
 
     private void parseUpdateLeafSetMessage(UpdateLeafSetMessage msg) {
         logger.log(Level.FINE, "Changing leaf set to reflect updated version");
+        logger.log(Level.FINE, "New leafset is: \n" + msg.getResponseLeaf());
 
         if (msg.getResponseLeaf().getHi().equals("current"))
             this.leafSet.setLo(msg.getResponseLeaf().getLo(), msg.getResponseLeaf().getLoAddr());
@@ -262,14 +261,14 @@ public class MemberPeer implements Peer {
     private void sendToHiLeaf(Connection joiningPeerConnection, int rowIndex) throws IOException {
         logger.log(Level.FINE, "My hi leaf is closer at: " + leafSet.getFullHi());
         logger.log(Level.FINE, "Sending row: " + routingTable.getRow(rowIndex));
-        joiningPeerConnection.sendMessage(new ForwardToMessage(leafSet.getHi(), leafSet.getFullHi(), rowIndex,
+        joiningPeerConnection.sendMessage(new ForwardToMessage(this.id, leafSet.getHi(), leafSet.getFullHi(), rowIndex,
                 routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
     }
 
     private void sendToLoLeaf(Connection joiningPeerConnection, int rowIndex) throws IOException {
         logger.log(Level.FINE, "My low leaf is closer at: " + leafSet.getFullLo());
         logger.log(Level.FINE, "Sending row: " + routingTable.getRow(rowIndex));
-        joiningPeerConnection.sendMessage(new ForwardToMessage(leafSet.getLo(), leafSet.getFullLo(), rowIndex,
+        joiningPeerConnection.sendMessage(new ForwardToMessage(this.id, leafSet.getLo(), leafSet.getFullLo(), rowIndex,
                 routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
     }
 
@@ -280,6 +279,7 @@ public class MemberPeer implements Peer {
         String msgAddrPort = msg.getAddr() + "_" + msg.getHostPort() + "_" + msg.getPort();
         String thisAddrPort = joiningPeerConnection.getLocalAddr() + "_" + serverThread.getPort()
                 + "_" + joiningPeerConnection.getLocalPort();
+
         if (leafSet.isEmpty()) {
             newSet = new LeafSet(this.id, this.id, thisAddrPort, thisAddrPort);
             joiningPeerConnection.sendMessage(new UpdateLeafSetMessage(newSet));
@@ -292,7 +292,7 @@ public class MemberPeer implements Peer {
             if (Util.getNumericalDifference(this.id, msg.getId()) > 0
                     && Util.getNumericalDifference(leafSet.getLo(), msg.getId()) > 0) { //Incoming is low
 
-                if (Util.getNumericalDifference(this.id, leafSet.getHi()) < 0) { //"this" is middle node - wrapped
+                if (Util.getNumericalDifference(this.id, leafSet.getHi()) < 0) { //"this" is middle node - no wrap
                     newSet = new LeafSet(this.id,
                             leafSet.getHi(),
                             thisAddrPort,
@@ -310,7 +310,7 @@ public class MemberPeer implements Peer {
                             leafSet.getFullLo(),
                             thisAddrPort);
 
-                    otherLeafSet = new LeafSet("current", msg.getId(), "current", msg.getAddr());
+                    otherLeafSet = new LeafSet("current", msg.getId(), "current", msgAddrPort);
                     Socket s = new Socket(InetAddress.getByName(leafSet.getLoAddr()), leafSet.getLoHostPort());
                     Connection otherConnection = new Connection(this, s);
                     otherConnection.sendMessage(new UpdateLeafSetMessage(otherLeafSet));
@@ -361,7 +361,7 @@ public class MemberPeer implements Peer {
                     Connection otherConnection = new Connection(this, s);
                     otherConnection.sendMessage(new UpdateLeafSetMessage(otherLeafSet));
 
-                    leafSet.setHi(msg.getId(), msg.getAddr());
+                    leafSet.setHi(msg.getId(), msgAddrPort);
                 } else {
                     newSet = new LeafSet(this.id,
                             leafSet.getLo(),
