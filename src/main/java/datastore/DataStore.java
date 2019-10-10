@@ -1,22 +1,27 @@
 package datastore;
 
+import message.Message;
+
+import java.io.DataInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 
 public class DataStore {
-    private String dir;
+    private String storageDir;
     private ArrayList<String> files;
+
     public DataStore(String dir){
-        this.dir = dir;
+        this.storageDir = dir;
         this.files = new ArrayList<>();
     }
 
-    public void writeFile(String filename) throws IOException {
-
+    public void writeFile(Message m, String filename, int fileSize) throws IOException {
+        files.add(filename);
     }
 
-    public String getDir(){
-        return this.dir;
+    public String getStorageDir(){
+        return this.storageDir;
     }
 
     public ArrayList<String> getFiles(){

@@ -43,7 +43,7 @@ public class DiscoveryPeer implements Peer {
         new DiscoveryPeer(Integer.parseInt(args[0]));
     }
 
-    private void startConsole() {
+    public void startConsole() {
         Scanner scn = new Scanner(System.in);
         while (true) {
             System.out.println("Please enter a command: ");

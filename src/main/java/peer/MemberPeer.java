@@ -1,5 +1,6 @@
 package peer;
 
+import datastore.DataStore;
 import message.*;
 import network.Connection;
 import network.ServerThread;
@@ -23,15 +24,16 @@ public class MemberPeer implements Peer {
 
     private ServerThread serverThread;
     private String id;
-    private Map<String, Connection> ipConnectionMap = new ConcurrentHashMap<>();
     private LeafSet leafSet;
     private RoutingTable routingTable;
+    private DataStore dataStore;
+    private Map<String, Connection> ipConnectionMap = new ConcurrentHashMap<>();
     private ArrayList<String> travelRoute;
     private static final Logger logger = Logger.getLogger(DiscoveryPeer.class.getName());
     private static FileHandler fh;
 
 
-    public MemberPeer(InetAddress discoveryAddr, int discoveryPort, String id) throws IOException {
+    public MemberPeer(InetAddress discoveryAddr, int discoveryPort, String id, String storageDir) throws IOException {
         this.dicoveryAddr = discoveryAddr;
         this.discoveryPort = discoveryPort;
         if (id == null)
@@ -40,6 +42,7 @@ public class MemberPeer implements Peer {
             this.id = id;
         leafSet = new LeafSet("", "", "", "");
         travelRoute = new ArrayList<>();
+        dataStore = new DataStore(storageDir);
         System.out.println("My node id is: " + this.id);
 
         //Logger
@@ -69,14 +72,14 @@ public class MemberPeer implements Peer {
 
     public static void main(String[] args) throws Exception {
         InetAddress discoveryPeerAddr = InetAddress.getByName(args[0]);
-        if (args.length == 2)
-            new MemberPeer(discoveryPeerAddr, Integer.parseInt(args[1]), null);
+        if (args.length == 3)
+            new MemberPeer(discoveryPeerAddr, Integer.parseInt(args[1]), null, args[2]);
         else {
-            new MemberPeer(discoveryPeerAddr, Integer.parseInt(args[1]), args[2]);
+            new MemberPeer(discoveryPeerAddr, Integer.parseInt(args[1]), args[2], args[3]);
         }
     }
 
-    private void startConsole() {
+     public void startConsole() {
         Scanner scn = new Scanner(System.in);
         while (true) {
             System.out.println("Please enter a command: ");
@@ -290,23 +293,22 @@ public class MemberPeer implements Peer {
         } else {
             LeafSet otherLeafSet = null;
             int diff = Util.getNumericalDifference(this.id, msg.getId());
-            if(diff < 0){ // Joining is hi
+            if (diff < 0) { // Joining is hi
                 newSet = new LeafSet(leafSet.getHi(), this.id, leafSet.getFullHi(), thisAddrPort);
-                otherLeafSet = new LeafSet("current",msg.getId(), "current", msgAddrPort);
+                otherLeafSet = new LeafSet("current", msg.getId(), "current", msgAddrPort);
 
                 Socket s = new Socket(InetAddress.getByName(leafSet.getHiAddr()), leafSet.getHiHostPort());
                 Connection otherConnection = new Connection(this, s);
                 otherConnection.sendMessage(new UpdateLeafSetMessage(otherLeafSet));
 
                 leafSet.setHi(msg.getId(), msgAddrPort);
-            }
-            else{ // Joining is lo
-                 newSet = new LeafSet(this.id, leafSet.getLo(), thisAddrPort, leafSet.getFullLo());
-                 otherLeafSet = new LeafSet(msg.getId(), "current", msgAddrPort, "current");
+            } else { // Joining is lo
+                newSet = new LeafSet(this.id, leafSet.getLo(), thisAddrPort, leafSet.getFullLo());
+                otherLeafSet = new LeafSet(msg.getId(), "current", msgAddrPort, "current");
 
-                 Socket s = new Socket(InetAddress.getByName(leafSet.getLoAddr()), leafSet.getLoHostPort());
-                 Connection otherConnection = new Connection(this, s);
-                 otherConnection.sendMessage(new UpdateLeafSetMessage(otherLeafSet));
+                Socket s = new Socket(InetAddress.getByName(leafSet.getLoAddr()), leafSet.getLoHostPort());
+                Connection otherConnection = new Connection(this, s);
+                otherConnection.sendMessage(new UpdateLeafSetMessage(otherLeafSet));
 
                 leafSet.setLo(msg.getId(), msgAddrPort);
             }
