@@ -193,7 +193,7 @@ public class MemberPeer implements Peer {
         routingTable.insertNewPeer(msg.getId(), msg.getAddr(), msg.getHostPort());
 
         if (leafSet.isEmpty()) { // Second node in the system
-            insertNewPeer(msg);
+            insertNewLeaf(msg);
             joiningPeerConnection.sendMessage(new ForwardToMessage(this.id, "", "", rowIndex,
                     routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
         } else if (closestId.equals(this.id)) { //Arrived at closest node, check leafs
@@ -213,7 +213,7 @@ public class MemberPeer implements Peer {
             } else {
                 logger.log(Level.FINE, "Destination reached: " + this.id);
                 logger.log(Level.FINE, "Sending row: " + routingTable.getRow(rowIndex));
-                insertNewPeer(msg);
+                insertNewLeaf(msg);
                 joiningPeerConnection.sendMessage(new ForwardToMessage(this.id, "", "", rowIndex,
                         routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
             }
@@ -272,7 +272,7 @@ public class MemberPeer implements Peer {
                 routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
     }
 
-    private synchronized void insertNewPeer(JoinPeerMessage msg) throws IOException {
+    private synchronized void insertNewLeaf(JoinPeerMessage msg) throws IOException {
         Connection joiningPeerConnection = ipConnectionMap.get(msg.getAddr() + "_" + msg.getPort());
 
         LeafSet newSet;
@@ -280,7 +280,7 @@ public class MemberPeer implements Peer {
         String thisAddrPort = joiningPeerConnection.getLocalAddr() + "_" + serverThread.getPort()
                 + "_" + joiningPeerConnection.getLocalPort();
 
-        if (leafSet.isEmpty()) {
+        if (leafSet.isEmpty()) { // First join in
             newSet = new LeafSet(this.id, this.id, thisAddrPort, thisAddrPort);
             joiningPeerConnection.sendMessage(new UpdateLeafSetMessage(newSet));
 
