@@ -1,5 +1,8 @@
 package peer;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
 public class Util {
     /**
      * This method converts a set of bytes into a Hexadecimal representation.
@@ -54,9 +57,23 @@ public class Util {
         return parsedId1 - parsedId2;
     }
 
-    public static int getDigitDifference(String id1, String id2, int index) {
-        int id1DigitVal = Character.digit(id1.charAt(index), 16);
-        int id2DigitVal = Character.digit(id1.charAt(index), 16);
-        return Math.abs(id1DigitVal - id2DigitVal);
+    public static String getTimestampId() throws NoSuchAlgorithmException {
+        long timeStamp = System.currentTimeMillis();
+        String hex = Long.toHexString(timeStamp);
+
+        MessageDigest messageDigest = MessageDigest.getInstance("SHA-1");
+        byte[] buf = messageDigest.digest(hex.getBytes());
+        String hashedHex = convertBytesToHex(buf);
+
+        return hashedHex.substring(hashedHex.length() - 4);
     }
+
+    public static String getFilenameHash(String filename) throws NoSuchAlgorithmException {
+        MessageDigest messageDigest = MessageDigest.getInstance("SHA-1");
+        byte[] buf = messageDigest.digest(filename.getBytes());
+        String hashedHex = convertBytesToHex(buf);
+
+        return hashedHex.substring(hashedHex.length() - 4);
+    }
+
 }

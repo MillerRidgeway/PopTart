@@ -65,6 +65,8 @@ public class DiscoveryPeer implements Peer {
     public void parseMessage(Message msg) throws IOException {
         if (msg instanceof DiscoverMessage) {
             parseDiscoverMessage((DiscoverMessage) msg);
+        } else if (msg instanceof FileStoreMessage) {
+            parseFileStoreMessage((FileStoreMessage) msg);
         }
     }
 
@@ -84,6 +86,7 @@ public class DiscoveryPeer implements Peer {
         logger.log(Level.FINE, "Host port: " + msg.getHostPort());
         logger.log(Level.FINE, "Thread port: " + msg.getPort());
         logger.log(Level.FINE, "ID: " + msg.getId());
+
         Connection c = connectionMap.get(msg.getHost() + "_" + msg.getPort());
 
         if (knownIds.contains(msg.getId())) {
@@ -107,5 +110,24 @@ public class DiscoveryPeer implements Peer {
             knownIds.add(msg.getId());
             connectionHostMap.put(msg.getHost() + "_" + msg.getPort(), msg.getHostPort());
         }
+    }
+
+    private void parseFileStoreMessage(FileStoreMessage msg) throws IOException {
+        logger.log(Level.FINE, "Got file store request.");
+        logger.log(Level.FINE, "File store client is at addr: " + msg.getInfo().getHost());
+        logger.log(Level.FINE, "File store client host port: " + msg.getInfo().getHostPort());
+        logger.log(Level.FINE, "File store client thread port: " + msg.getInfo().getPort());
+
+        Connection c = connectionMap.get(msg.getInfo().getHost() + "_" + msg.getInfo().getPort());
+
+        logger.log(Level.FINE, "Sending a random node for routing.");
+
+        //Get a random peer from the active peer set
+        Random generator = new Random();
+        Map<String, Connection> tempMap = new ConcurrentHashMap<>(connectionMap);
+        tempMap.remove(msg.getInfo().getHost() + "_" + msg.getInfo().getPort());
+        Object[] vals = tempMap.keySet().toArray();
+        String key = (String) vals[0];//generator.nextInt(vals.length)
+        c.sendMessage(new JoinAckMessage(key, connectionHostMap.get(key)));
     }
 }

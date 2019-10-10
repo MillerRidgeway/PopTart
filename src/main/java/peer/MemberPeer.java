@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Scanner;
@@ -29,15 +30,15 @@ public class MemberPeer implements Peer {
     private DataStore dataStore;
     private Map<String, Connection> ipConnectionMap = new ConcurrentHashMap<>();
     private ArrayList<String> travelRoute;
-    private static final Logger logger = Logger.getLogger(DiscoveryPeer.class.getName());
+    private static final Logger logger = Logger.getLogger(MemberPeer.class.getName());
     private static FileHandler fh;
 
 
-    public MemberPeer(InetAddress discoveryAddr, int discoveryPort, String id, String storageDir) throws IOException {
+    public MemberPeer(InetAddress discoveryAddr, int discoveryPort, String id, String storageDir) throws Exception {
         this.dicoveryAddr = discoveryAddr;
         this.discoveryPort = discoveryPort;
         if (id == null)
-            this.id = getTimestampId();
+            this.id = Util.getTimestampId();
         else
             this.id = id;
         leafSet = new LeafSet("", "", "", "");
@@ -111,7 +112,7 @@ public class MemberPeer implements Peer {
     }
 
     @Override
-    public void parseMessage(Message msg) throws IOException {
+    public void parseMessage(Message msg) throws IOException, NoSuchAlgorithmException {
         if (msg instanceof RediscoverMessage) { //Collision within the ID space
             logger.log(Level.FINE, "Got rediscover, trying again.");
             parseRediscoverMessage((RediscoverMessage) msg);
@@ -142,16 +143,10 @@ public class MemberPeer implements Peer {
         ipConnectionMap.put(c.getAddr() + "_" + c.getPort(), c);
     }
 
-    private String getTimestampId() {
-        long timeStamp = System.currentTimeMillis();
-        String hex = Long.toHexString(timeStamp);
-        return hex.substring(hex.length() - 4);
-    }
-
-    private void parseRediscoverMessage(RediscoverMessage msg) throws IOException {
+    private void parseRediscoverMessage(RediscoverMessage msg) throws IOException, NoSuchAlgorithmException {
         logger.log(Level.FINE, "Got rediscover (ID collision), sending with new ID");
 
-        String randId = getTimestampId();
+        String randId = Util.getTimestampId();
         this.id = randId;
         System.out.println("My new ID is: " + this.id);
         DiscoverMessage dm = new DiscoverMessage(randId, discoveryConnection.getAddr(), serverThread.getPort(),

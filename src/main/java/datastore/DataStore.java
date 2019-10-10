@@ -16,7 +16,7 @@ public class DataStore {
         this.files = new ArrayList<>();
     }
 
-    public void writeFile(Message m, String filename, int fileSize) throws IOException {
+    public void writeFile(int fileSize,byte[] fileContents, String filename) throws IOException {
         files.add(filename);
     }
 
