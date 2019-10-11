@@ -100,12 +100,7 @@ public class DiscoveryPeer implements Peer {
         } else {
             logger.log(Level.FINE, "Sending a random node for routing.");
             //Get a random peer from the active peer set
-            Random generator = new Random();
-            Map<String, Connection> tempMap = new ConcurrentHashMap<>(connectionMap);
-            tempMap.remove(msg.getHost() + "_" + msg.getPort());
-            Object[] vals = tempMap.keySet().toArray();
-            String key = (String) vals[0];//generator.nextInt(vals.length)
-            c.sendMessage(new JoinAckMessage(key, connectionHostMap.get(key)));
+            SendRandPeer(c, msg);
 
             knownIds.add(msg.getId());
             connectionHostMap.put(msg.getHost() + "_" + msg.getPort(), msg.getHostPort());
@@ -120,12 +115,16 @@ public class DiscoveryPeer implements Peer {
 
         Connection c = connectionMap.get(msg.getInfo().getHost() + "_" + msg.getInfo().getPort());
 
-        logger.log(Level.FINE, "Sending a random node for routing.");
+        logger.log(Level.FINE, "Sending a random node for file routing.");
 
         //Get a random peer from the active peer set
+        SendRandPeer(c, msg.getInfo());
+    }
+
+    private void SendRandPeer(Connection c, DiscoverMessage info) throws IOException {
         Random generator = new Random();
         Map<String, Connection> tempMap = new ConcurrentHashMap<>(connectionMap);
-        tempMap.remove(msg.getInfo().getHost() + "_" + msg.getInfo().getPort());
+        tempMap.remove(info.getHost() + "_" + info.getPort());
         Object[] vals = tempMap.keySet().toArray();
         String key = (String) vals[0];//generator.nextInt(vals.length)
         c.sendMessage(new JoinAckMessage(key, connectionHostMap.get(key)));

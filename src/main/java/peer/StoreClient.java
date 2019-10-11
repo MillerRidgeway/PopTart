@@ -85,10 +85,13 @@ public class StoreClient implements Peer {
         if (msg instanceof JoinAckMessage) {
             logger.log(Level.FINE, "Got ack for file store request");
             parseJoinAckMessage((JoinAckMessage) msg);
+        } else if (msg instanceof ForwardToMessage) {
+            logger.log(Level.FINE, "Got forward to, moving to next destination.");
+            parseForwardToMessage((ForwardToMessage) msg);
         }
     }
 
-    private void parseJoinAckMessage(JoinAckMessage msg) throws UnknownHostException, IOException {
+    private void parseJoinAckMessage(JoinAckMessage msg) throws IOException {
         logger.log(Level.FINE, "Connecting to IP: " + msg.getRandPeer());
         logger.log(Level.FINE, "Connecting to port: " + msg.getHostPort());
 
@@ -96,5 +99,19 @@ public class StoreClient implements Peer {
         Connection c = new Connection(this, s);
         c.sendMessage(new JoinPeerMessage(this.fileId, c.getLocalAddr(), c.getLocalPort(),
                 serverThread.getPort(), null));
+    }
+
+    private void parseForwardToMessage(ForwardToMessage msg) throws IOException {
+        if (msg.getDestIp().isEmpty()) {
+            logger.log(Level.FINE, "Found node to store file " + fileId + " at.");
+            //Send a request back w/ the file. (FileStoreMessage)
+        } else {
+            logger.log(Level.FINE, "There is a closer peer at: " + msg.getDestIp());
+            logger.log(Level.FINE, "I am connecting to port: " + msg.getDestHostPort());
+            Socket s = new Socket(InetAddress.getByName(msg.getDestIp()), msg.getDestHostPort());
+            Connection c = new Connection(this, s);
+            c.sendMessage(new JoinPeerMessage(fileId, c.getLocalAddr(), c.getLocalPort(),
+                    serverThread.getPort(), null));
+        }
     }
 }

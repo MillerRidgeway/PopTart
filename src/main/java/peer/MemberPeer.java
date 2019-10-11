@@ -80,7 +80,7 @@ public class MemberPeer implements Peer {
         }
     }
 
-     public void startConsole() {
+    public void startConsole() {
         Scanner scn = new Scanner(System.in);
         while (true) {
             System.out.println("Please enter a command: ");
@@ -188,7 +188,9 @@ public class MemberPeer implements Peer {
         else
             closestId = routingTable.findClosest(msg.getId());
         String closestIp = routingTable.findClosestIp(closestId);
-        routingTable.insertNewPeer(msg.getId(), msg.getAddr(), msg.getHostPort());
+
+        if (msg.getLeafSet() != null)
+            routingTable.insertNewPeer(msg.getId(), msg.getAddr(), msg.getHostPort());
 
         if (leafSet.isEmpty()) { // Second node in the system
             insertNewLeaf(msg);
@@ -204,11 +206,11 @@ public class MemberPeer implements Peer {
             logger.log(Level.FINER, "Lo ID diff is: " + loDiff);
             logger.log(Level.FINER, "Hi ID diff is: " + hiDiff);
 
-            if (loDiff < myDiff && loDiff <= hiDiff) {
+            if (loDiff < myDiff && loDiff <= hiDiff) { //Lo node is closer
                 sendToLoLeaf(joiningPeerConnection, rowIndex);
-            } else if (hiDiff < myDiff) {
+            } else if (hiDiff < myDiff) { //Hi node is closer
                 sendToHiLeaf(joiningPeerConnection, rowIndex);
-            } else {
+            } else { //I am the closest node
                 logger.log(Level.FINE, "Destination reached: " + this.id);
                 logger.log(Level.FINE, "Sending row: " + routingTable.getRow(rowIndex));
                 insertNewLeaf(msg);
@@ -271,6 +273,9 @@ public class MemberPeer implements Peer {
     }
 
     private synchronized void insertNewLeaf(JoinPeerMessage msg) throws IOException {
+        if (msg.getLeafSet() == null)
+            return;
+
         Connection joiningPeerConnection = ipConnectionMap.get(msg.getAddr() + "_" + msg.getPort());
 
         LeafSet newSet;
