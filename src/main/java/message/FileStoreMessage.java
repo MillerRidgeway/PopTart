@@ -4,21 +4,27 @@ import java.io.File;
 
 public class FileStoreMessage extends Message {
     private String fileId;
-    private File file;
+    private byte [] contents;
+    private File f;
     private DiscoverMessage info;
 
-    public FileStoreMessage(String fileId, File f, DiscoverMessage info) {
+    public FileStoreMessage(String fileId, File f, byte[] contents, DiscoverMessage info) {
         this.fileId = fileId;
-        this.file = f;
+        this.contents = contents;
         this.info = info;
+        this.f = f;
     }
 
     public String getFileId() {
         return this.fileId;
     }
 
-    public File getFile() {
-        return this.file;
+    public byte [] getContents() {
+        return this.contents;
+    }
+
+    public File getFile(){
+        return this.f;
     }
 
     public DiscoverMessage getInfo() {

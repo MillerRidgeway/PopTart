@@ -1,6 +1,5 @@
 package peer;
 
-import datastore.DataStore;
 import message.*;
 import network.Connection;
 import network.ServerThread;
@@ -10,7 +9,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.file.FileStore;
+import java.nio.file.Files;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,7 +22,6 @@ import java.util.logging.SimpleFormatter;
 public class StoreClient implements Peer {
     private ServerThread serverThread;
     private Connection discoveryConnection;
-    private DataStore dataStore;
     private String fileId;
     private Map<String, Connection> ipConnectionMap = new ConcurrentHashMap<>();
     private FileStoreMessage fsm;
@@ -65,13 +63,13 @@ public class StoreClient implements Peer {
                 this.fileId = Util.getFilenameHash(fName);
                 System.out.println("File ID is: " + fileId);
                 File f = new File(fName);
+                byte[] contents = Files.readAllBytes(f.toPath());
                 DiscoverMessage dm = new DiscoverMessage(getId(), discoveryConnection.getAddr(), serverThread.getPort(),
                         discoveryConnection.getLocalPort());
-                fsm = new FileStoreMessage(fileId, f, dm);
+                fsm = new FileStoreMessage(fileId, f, contents, dm);
                 discoveryConnection.sendMessage(fsm);
             } catch (Exception e) {
-                System.out.println("Error in sending file.");
-                e.printStackTrace();
+                System.out.println("Error sending file: " + e);
             }
 
         }

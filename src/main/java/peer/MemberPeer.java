@@ -131,9 +131,9 @@ public class MemberPeer implements Peer {
         } else if (msg instanceof UpdateLeafSetMessage) {
             logger.log(Level.FINE, "Got update leafset message");
             parseUpdateLeafSetMessage((UpdateLeafSetMessage) msg);
-        } else if (msg instanceof FileStoreMessage){
+        } else if (msg instanceof FileStoreMessage) {
             logger.log(Level.FINE, "Got file store request, storing file here.");
-            System.out.println("NOW IM GONNA STORE ITTTTT");
+            parseFileStoreMessage((FileStoreMessage) msg);
         }
     }
 
@@ -252,6 +252,12 @@ public class MemberPeer implements Peer {
         } else {
             logger.log(Level.FINE, "Reached final destination.");
         }
+    }
+
+    private void parseFileStoreMessage(FileStoreMessage msg) throws IOException {
+        logger.log(Level.FINE, "Writing file " + msg.getFile().getName());
+        logger.log(Level.FINE, "File ID is: " + msg.getFileId());
+        dataStore.writeFile(msg.getFile().getName(), msg.getContents());
     }
 
     private void parseUpdateLeafSetMessage(UpdateLeafSetMessage msg) {
