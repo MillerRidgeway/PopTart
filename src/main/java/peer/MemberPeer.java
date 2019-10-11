@@ -34,7 +34,7 @@ public class MemberPeer implements Peer {
     private static FileHandler fh;
 
 
-    public MemberPeer(InetAddress discoveryAddr, int discoveryPort, String id, String storageDir) throws Exception {
+    public MemberPeer(InetAddress discoveryAddr, int discoveryPort, String storageDir, String id) throws Exception {
         this.dicoveryAddr = discoveryAddr;
         this.discoveryPort = discoveryPort;
         if (id == null)
@@ -131,6 +131,9 @@ public class MemberPeer implements Peer {
         } else if (msg instanceof UpdateLeafSetMessage) {
             logger.log(Level.FINE, "Got update leafset message");
             parseUpdateLeafSetMessage((UpdateLeafSetMessage) msg);
+        } else if (msg instanceof FileStoreMessage){
+            logger.log(Level.FINE, "Got file store request, storing file here.");
+            System.out.println("NOW IM GONNA STORE ITTTTT");
         }
     }
 
@@ -189,12 +192,17 @@ public class MemberPeer implements Peer {
             closestId = routingTable.findClosest(msg.getId());
         String closestIp = routingTable.findClosestIp(closestId);
 
+        String pitstop = this.id + "_"
+                + joiningPeerConnection.getLocalAddr()
+                + "_"
+                + joiningPeerConnection.getLocalPort();
+
         if (msg.getLeafSet() != null)
             routingTable.insertNewPeer(msg.getId(), msg.getAddr(), msg.getHostPort());
 
         if (leafSet.isEmpty()) { // Second node in the system
             insertNewLeaf(msg);
-            joiningPeerConnection.sendMessage(new ForwardToMessage(this.id, "", "", rowIndex,
+            joiningPeerConnection.sendMessage(new ForwardToMessage(pitstop, "", "", rowIndex,
                     routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
         } else if (closestId.equals(this.id)) { //Arrived at closest node, check leafs
             logger.log(Level.FINE, "Closest ID in my table is me.");
@@ -214,14 +222,14 @@ public class MemberPeer implements Peer {
                 logger.log(Level.FINE, "Destination reached: " + this.id);
                 logger.log(Level.FINE, "Sending row: " + routingTable.getRow(rowIndex));
                 insertNewLeaf(msg);
-                joiningPeerConnection.sendMessage(new ForwardToMessage(this.id, "", "", rowIndex,
+                joiningPeerConnection.sendMessage(new ForwardToMessage(pitstop, "", "", rowIndex,
                         routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
             }
 
         } else { //Route by DHT
             logger.log(Level.FINE, "My routing table has a closer peer: " + closestId + " " + closestIp);
             logger.log(Level.FINE, "Sending row: " + routingTable.getRow(rowIndex));
-            joiningPeerConnection.sendMessage(new ForwardToMessage(this.id, closestId, closestIp, rowIndex,
+            joiningPeerConnection.sendMessage(new ForwardToMessage(pitstop, closestId, closestIp, rowIndex,
                     routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
         }
     }
@@ -230,7 +238,7 @@ public class MemberPeer implements Peer {
         logger.log(Level.FINE, "Adding row from " + msg.getPitstop() + " - row num is: " + msg.getRowIndex());
         logger.log(Level.FINE, "Row contents: " + msg.getTableRow());
 
-        travelRoute.add(msg.getPitstop());
+        travelRoute.add(msg.getPitstop().split("_")[0]);
         routingTable.setRow(msg.getRowIndex(), msg.getTableRow());
         routingTable.putIps(msg.getTableRow(), msg.getIps());
 

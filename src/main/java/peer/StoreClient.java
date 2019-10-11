@@ -10,8 +10,10 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
+import java.nio.file.FileStore;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -23,10 +25,12 @@ public class StoreClient implements Peer {
     private Connection discoveryConnection;
     private DataStore dataStore;
     private String fileId;
+    private Map<String, Connection> ipConnectionMap = new ConcurrentHashMap<>();
+    private FileStoreMessage fsm;
     private static final Logger logger = Logger.getLogger(StoreClient.class.getName());
     private static FileHandler fh;
 
-    public StoreClient(String discoveryAddr, int discoveryPort, String storageDir) throws IOException {
+    public StoreClient(String discoveryAddr, int discoveryPort) throws IOException {
         //Server Thread
         ServerSocket ss = new ServerSocket(0);
         serverThread = new ServerThread(this, ss);
@@ -34,7 +38,7 @@ public class StoreClient implements Peer {
         System.out.println("Connections coming in on: " + ss.getLocalPort());
 
         //Logger
-        fh = new FileHandler("StoreClient.log");
+        fh = new FileHandler("storeClient.log");
         fh.setFormatter(new SimpleFormatter());
         logger.addHandler(fh);
         logger.setLevel(Level.FINER);
@@ -42,10 +46,12 @@ public class StoreClient implements Peer {
         //Discovery connection
         Socket s = new Socket(discoveryAddr, discoveryPort);
         discoveryConnection = new Connection(this, s);
+
+        startConsole();
     }
 
     public static void main(String[] args) throws IOException {
-        new StoreClient(args[0], Integer.parseInt(args[1]), args[2]);
+        new StoreClient(args[0], Integer.parseInt(args[1]));
     }
 
     @Override
@@ -57,10 +63,11 @@ public class StoreClient implements Peer {
             System.out.println("Attempting to upload: " + fName);
             try {
                 this.fileId = Util.getFilenameHash(fName);
+                System.out.println("File ID is: " + fileId);
                 File f = new File(fName);
                 DiscoverMessage dm = new DiscoverMessage(getId(), discoveryConnection.getAddr(), serverThread.getPort(),
                         discoveryConnection.getLocalPort());
-                FileStoreMessage fsm = new FileStoreMessage(fileId, f, dm);
+                fsm = new FileStoreMessage(fileId, f, dm);
                 discoveryConnection.sendMessage(fsm);
             } catch (Exception e) {
                 System.out.println("Error in sending file.");
@@ -72,7 +79,7 @@ public class StoreClient implements Peer {
 
     @Override
     public void addNewConnection(Connection c) {
-        System.out.println("New connection to: " + c);
+        ipConnectionMap.put(c.getAddr() + "_" + c.getPort(), c);
     }
 
     @Override
@@ -102,10 +109,14 @@ public class StoreClient implements Peer {
     }
 
     private void parseForwardToMessage(ForwardToMessage msg) throws IOException {
-        if (msg.getDestIp().isEmpty()) {
+        if (msg.getDestIp().isEmpty()) { //Final destination, send the file. (FileStoreMessage)
             logger.log(Level.FINE, "Found node to store file " + fileId + " at.");
-            //Send a request back w/ the file. (FileStoreMessage)
-        } else {
+            String ip = msg.getPitstop().split("_")[1];
+            String port = msg.getPitstop().split("_")[2];
+            Connection storageDestination = ipConnectionMap.get(ip + "_" + port);
+
+            storageDestination.sendMessage(this.fsm);
+        } else { // Continue walking forward path
             logger.log(Level.FINE, "There is a closer peer at: " + msg.getDestIp());
             logger.log(Level.FINE, "I am connecting to port: " + msg.getDestHostPort());
             Socket s = new Socket(InetAddress.getByName(msg.getDestIp()), msg.getDestHostPort());
