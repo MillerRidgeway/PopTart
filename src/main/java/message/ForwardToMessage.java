@@ -7,7 +7,8 @@ public class ForwardToMessage extends Message {
     private int destHostPort, rowIndex;
     private List<String> tableRow, ips;
 
-    public ForwardToMessage(String pitstop, String destId, String destIp, int rowIndex, List<String> tableRow, List<String> ips) {
+    public ForwardToMessage(String pitstop, String destId, String destIp,
+                            int rowIndex, List<String> tableRow, List<String> ips) {
         this.pitstop = pitstop;
         this.destId = destId;
         this.tableRow = tableRow;

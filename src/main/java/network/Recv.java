@@ -13,6 +13,7 @@ public class Recv extends Thread {
     private Socket s;
     private DataInputStream input;
     private Peer p;
+    private boolean running = true;
 
     public Recv(Socket s, Peer p) throws IOException {
         this.s = s;
@@ -21,14 +22,19 @@ public class Recv extends Thread {
     }
 
     public void run() {
-        while (s != null) {
+        while (running) {
             try {
                 p.parseMessage(readMessage());
             } catch (Exception e) {
-                System.out.println("Failure reading message");
-                e.printStackTrace();
+                if(running)
+                    System.out.println("Failure reading message");
+                //e.printStackTrace();
             }
         }
+    }
+
+    public void stopRunning(){
+        this.running = false;
     }
 
     public Message readMessage() throws IOException, ClassNotFoundException {

@@ -106,7 +106,7 @@ public class StoreClient implements Peer {
                 serverThread.getPort(), null));
     }
 
-    private void parseForwardToMessage(ForwardToMessage msg) throws IOException {
+    private synchronized void parseForwardToMessage(ForwardToMessage msg) throws IOException {
         if (msg.getDestIp().isEmpty()) { //Final destination, send the file. (FileStoreMessage)
             logger.log(Level.FINE, "Found node to store file " + fileId + " at.");
             String ip = msg.getPitstop().split("_")[1];
@@ -114,7 +114,19 @@ public class StoreClient implements Peer {
             Connection storageDestination = ipConnectionMap.get(ip + "_" + port);
 
             storageDestination.sendMessage(this.fsm);
-        } else { // Continue bouncing around the network
+
+            String discoveryInfo = discoveryConnection.getAddr() + "_" + discoveryConnection.getPort();
+            for (Map.Entry<String, Connection> e : ipConnectionMap.entrySet()) {
+                Connection val = e.getValue();
+                String addrPort = val.getAddr() + "_" + val.getPort();
+                if (!(addrPort.equals(discoveryInfo))) {
+                    val.sendMessage(
+                            new ExitOverlayMessage(val.getLocalAddr(), val.getLocalPort()));
+                    val.closeConnection();
+                    ipConnectionMap.remove(addrPort);
+                }
+            }
+        } else { // Continue bouncing around the twork
             logger.log(Level.FINE, "There is a closer peer at: " + msg.getDestIp());
             logger.log(Level.FINE, "I am connecting to port: " + msg.getDestHostPort());
             logger.log(Level.FINE, "Forwarded from node " + msg.getPitstop());

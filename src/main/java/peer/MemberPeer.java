@@ -134,6 +134,9 @@ public class MemberPeer implements Peer {
         } else if (msg instanceof FileStoreMessage) {
             logger.log(Level.FINE, "Got file store request, storing file here.");
             parseFileStoreMessage((FileStoreMessage) msg);
+        } else if (msg instanceof ExitOverlayMessage) {
+            logger.log(Level.FINE, "Peer sending exiting request.");
+            parseExitOverlayMessage((ExitOverlayMessage) msg);
         }
     }
 
@@ -270,6 +273,18 @@ public class MemberPeer implements Peer {
             this.leafSet.setHi(msg.getResponseLeaf().getHi(), msg.getResponseLeaf().getFullHi());
         else
             this.leafSet = msg.getResponseLeaf();
+    }
+
+    private void parseExitOverlayMessage(ExitOverlayMessage msg) {
+        logger.log(Level.FINE, "IP exiting: " + msg.getExitingIp());
+        logger.log(Level.FINE, "Port exiting: " + msg.getExitingPort());
+
+        String addrPort = msg.getExitingIp() + "_" + msg.getExitingPort();
+        Connection toBeClosed = ipConnectionMap.get(addrPort);
+        toBeClosed.closeConnection();
+        ipConnectionMap.remove(addrPort);
+
+        logger.log(Level.FINE, "Peer successfully removed from connection list.");
     }
 
     private void sendToHiLeaf(Connection joiningPeerConnection, int rowIndex) throws IOException {

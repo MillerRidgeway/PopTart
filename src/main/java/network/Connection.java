@@ -31,6 +31,17 @@ public class Connection {
         return new Connection(p, s);
     }
 
+    public void closeConnection() {
+        try {
+            recv.stopRunning();
+            s.close();
+            System.out.println("Connection to " + getAddr() + "_" + getPort() + " closed");
+        } catch (IOException e) {
+            System.out.println("Failed to close connection.");
+            e.printStackTrace();
+        }
+    }
+
     @Override
     public String toString() {
         return getAddr() + "_" + getPort();
