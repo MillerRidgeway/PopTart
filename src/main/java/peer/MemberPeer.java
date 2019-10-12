@@ -62,7 +62,7 @@ public class MemberPeer implements Peer {
         Socket s = new Socket(discoveryAddr, discoveryPort);
         discoveryConnection = new Connection(this, s);
         DiscoverMessage dm = new DiscoverMessage(this.id, discoveryConnection.getAddr(), serverThread.getPort(),
-                discoveryConnection.getLocalPort());
+                discoveryConnection.getLocalPort(), false);
         discoveryConnection.sendMessage(dm);
 
         //Routing table
@@ -153,7 +153,7 @@ public class MemberPeer implements Peer {
         this.id = randId;
         System.out.println("My new ID is: " + this.id);
         DiscoverMessage dm = new DiscoverMessage(randId, discoveryConnection.getAddr(), serverThread.getPort(),
-                discoveryConnection.getLocalPort());
+                discoveryConnection.getLocalPort(), false);
         discoveryConnection.sendMessage(dm);
     }
 

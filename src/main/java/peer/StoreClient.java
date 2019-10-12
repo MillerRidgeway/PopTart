@@ -65,9 +65,9 @@ public class StoreClient implements Peer {
                 File f = new File(fName);
                 byte[] contents = Files.readAllBytes(f.toPath());
                 DiscoverMessage dm = new DiscoverMessage(getId(), discoveryConnection.getAddr(), serverThread.getPort(),
-                        discoveryConnection.getLocalPort());
-                fsm = new FileStoreMessage(fileId, f, contents, dm);
-                discoveryConnection.sendMessage(fsm);
+                        discoveryConnection.getLocalPort(), true);
+                fsm = new FileStoreMessage(fileId, f, contents);
+                discoveryConnection.sendMessage(dm);
             } catch (Exception e) {
                 System.out.println("Error sending file: " + e);
             }
@@ -114,9 +114,10 @@ public class StoreClient implements Peer {
             Connection storageDestination = ipConnectionMap.get(ip + "_" + port);
 
             storageDestination.sendMessage(this.fsm);
-        } else { // Continue walking forward path
+        } else { // Continue bouncing around the network
             logger.log(Level.FINE, "There is a closer peer at: " + msg.getDestIp());
             logger.log(Level.FINE, "I am connecting to port: " + msg.getDestHostPort());
+            logger.log(Level.FINE, "Forwarded from node " + msg.getPitstop());
             Socket s = new Socket(InetAddress.getByName(msg.getDestIp()), msg.getDestHostPort());
             Connection c = new Connection(this, s);
             c.sendMessage(new JoinPeerMessage(fileId, c.getLocalAddr(), c.getLocalPort(),

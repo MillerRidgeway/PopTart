@@ -65,8 +65,6 @@ public class DiscoveryPeer implements Peer {
     public void parseMessage(Message msg) throws IOException {
         if (msg instanceof DiscoverMessage) {
             parseDiscoverMessage((DiscoverMessage) msg);
-        } else if (msg instanceof FileStoreMessage) {
-            parseFileStoreMessage((FileStoreMessage) msg);
         }
     }
 
@@ -82,6 +80,7 @@ public class DiscoveryPeer implements Peer {
 
     private void parseDiscoverMessage(DiscoverMessage msg) throws IOException {
         logger.log(Level.FINE, "Got discovery message.");
+        logger.log(Level.FINE, "Is it a file?: " + msg.getIsFile());
         logger.log(Level.FINE, "Host addr: " + msg.getHost());
         logger.log(Level.FINE, "Host port: " + msg.getHostPort());
         logger.log(Level.FINE, "Thread port: " + msg.getPort());
@@ -89,7 +88,7 @@ public class DiscoveryPeer implements Peer {
 
         Connection c = connectionMap.get(msg.getHost() + "_" + msg.getPort());
 
-        if (knownIds.contains(msg.getId())) {
+        if (knownIds.contains(msg.getId()) && !msg.getIsFile()) {
             logger.log(Level.FINE, "ID " + msg.getId() + " is already in use. Sending rediscover request");
             c.sendMessage(new RediscoverMessage());
         } else if (knownIds.size() == 0) {
@@ -107,19 +106,6 @@ public class DiscoveryPeer implements Peer {
         }
     }
 
-    private void parseFileStoreMessage(FileStoreMessage msg) throws IOException {
-        logger.log(Level.FINE, "Got file store request.");
-        logger.log(Level.FINE, "File store client is at addr: " + msg.getInfo().getHost());
-        logger.log(Level.FINE, "File store client host port: " + msg.getInfo().getHostPort());
-        logger.log(Level.FINE, "File store client thread port: " + msg.getInfo().getPort());
-
-        Connection c = connectionMap.get(msg.getInfo().getHost() + "_" + msg.getInfo().getPort());
-
-        logger.log(Level.FINE, "Sending a random node for file routing.");
-
-        //Get a random peer from the active peer set
-        SendRandPeer(c, msg.getInfo());
-    }
 
     private void SendRandPeer(Connection c, DiscoverMessage info) throws IOException {
         Random generator = new Random();
