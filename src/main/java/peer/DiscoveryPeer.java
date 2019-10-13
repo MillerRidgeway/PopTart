@@ -88,17 +88,21 @@ public class DiscoveryPeer implements Peer {
 
         Connection c = connectionMap.get(msg.getHost() + "_" + msg.getPort());
 
-        if (knownIds.contains(msg.getId()) && !msg.getIsFile()) {
+        if (knownIds.contains(msg.getId()) && !msg.getIsFile()) { // ID collision
             logger.log(Level.FINE, "ID " + msg.getId() + " is already in use. Sending rediscover request");
             c.sendMessage(new RediscoverMessage());
-        } else if (knownIds.size() == 0) {
+        } else if (knownIds.size() == 0) { // First node in
             logger.log(Level.FINE, "First connected peer, sending first connect ack.");
             c.sendMessage(new FirstConnectAckMessage());
             knownIds.add(msg.getId());
             connectionHostMap.put(msg.getHost() + "_" + msg.getPort(), msg.getHostPort());
-        } else {
+        } else if (msg.getIsFile()) { //Is file request
+            logger.log(Level.FINE, "Sending a random node for storage.");
+            SendRandPeer(c, msg);
+
+            knownIds.add(msg.getId());
+        } else { //Normal peer join
             logger.log(Level.FINE, "Sending a random node for routing.");
-            //Get a random peer from the active peer set
             SendRandPeer(c, msg);
 
             knownIds.add(msg.getId());
