@@ -5,6 +5,7 @@ import peer.Peer;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.Socket;
 
@@ -12,15 +13,16 @@ public class Connection {
     private Peer p;
     private Socket s;
     private Recv recv;
-    private DataOutputStream out;
+    private ObjectOutputStream out;
 
     public Connection(Peer p, Socket s) throws IOException {
         this.p = p;
         this.s = s;
+
+        //Out must come before in (recv) or both sides block
+        out = new ObjectOutputStream(s.getOutputStream());
         this.recv = new Recv(s, p);
         this.recv.start();
-
-        out = new DataOutputStream(s.getOutputStream());
 
         p.addNewConnection(this);
         System.out.println("New connection made to: " +
@@ -64,10 +66,7 @@ public class Connection {
     }
 
     public void sendMessage(Message msg) throws IOException {
-        byte[] messageInBytes = msg.toBytes();
-        out.writeInt(messageInBytes.length);
-        out.write(messageInBytes);
-        out.flush();
+        out.writeObject(msg);
     }
 
 }

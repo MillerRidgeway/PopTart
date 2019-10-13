@@ -5,7 +5,6 @@ import message.Message;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.ArrayList;
 
 public class DataStore {
@@ -17,10 +16,10 @@ public class DataStore {
         this.files = new ArrayList<>();
     }
 
-    public void writeFile(String fileName, byte[] contents) throws IOException {
+    public void writeFile(String fileName, Object contents) throws IOException {
         File newFile = new File(storageDir + fileName);
         FileOutputStream fs = new FileOutputStream(newFile);
-        fs.write(contents);
+        fs.write((byte[]) contents);
         fs.close();
     }
 

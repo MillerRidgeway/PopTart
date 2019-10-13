@@ -5,6 +5,7 @@ import network.Connection;
 import network.ServerThread;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -63,7 +64,8 @@ public class StoreClient implements Peer {
                 this.fileId = Util.getFilenameHash(fName);
                 System.out.println("File ID is: " + fileId);
                 File f = new File(fName);
-                byte[] contents = Files.readAllBytes(f.toPath());
+                Object contents = Files.readAllBytes(f.toPath());
+
                 DiscoverMessage dm = new DiscoverMessage(getId(), discoveryConnection.getAddr(), serverThread.getPort(),
                         discoveryConnection.getLocalPort(), true);
                 fsm = new FileStoreMessage(fileId, f, contents);

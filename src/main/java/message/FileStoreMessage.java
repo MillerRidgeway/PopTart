@@ -4,10 +4,10 @@ import java.io.File;
 
 public class FileStoreMessage extends Message {
     private String fileId;
-    private byte [] contents;
+    private Object contents;
     private File f;
 
-    public FileStoreMessage(String fileId, File f, byte[] contents) {
+    public FileStoreMessage(String fileId, File f, Object contents) {
         this.fileId = fileId;
         this.contents = contents;
         this.f = f;
@@ -17,7 +17,7 @@ public class FileStoreMessage extends Message {
         return this.fileId;
     }
 
-    public byte [] getContents() {
+    public Object getContents() {
         return this.contents;
     }
 
