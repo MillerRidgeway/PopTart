@@ -124,7 +124,6 @@ public class DiscoveryPeer implements Peer {
         //TODO - Remove ID from list of known IDs
     }
 
-
     private void SendRandPeer(Connection c, DiscoverMessage info) throws IOException {
         Random generator = new Random();
         Map<String, Connection> tempMap = new ConcurrentHashMap<>(connectionMap);

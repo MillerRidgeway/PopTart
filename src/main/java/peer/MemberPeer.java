@@ -101,10 +101,17 @@ public class MemberPeer implements Peer {
                 case "pathway":
                     System.out.println("Took the path: " + this.travelRoute);
                     break;
+                case "list-files":
+                    for (String s : dataStore.getFiles()) {
+                        System.out.println(s);
+                    }
+                    break;
                 case "exit":
                     System.out.println("Exiting the overlay now.");
                     try {
                         exitOverlay();
+                        System.out.println("Overlay exit successful, now exiting system.");
+                        System.exit(0);
                     } catch (IOException e) {
                         System.out.println("Error exiting overlay.");
                         e.printStackTrace();
@@ -283,16 +290,6 @@ public class MemberPeer implements Peer {
             this.leafSet.setHi(msg.getResponseLeaf().getHi(), msg.getResponseLeaf().getFullHi());
         else
             this.leafSet = msg.getResponseLeaf();
-
-        //Make sure I am connected to my leaf set
-        if (ipConnectionMap.get(leafSet.getLoAddr() + "_" + leafSet.getLoPort()) == null) {
-            Socket s = new Socket(leafSet.getLoAddr(), leafSet.getLoHostPort());
-            Connection c = new Connection(this, s);
-        }
-        if(ipConnectionMap.get(leafSet.getHiAddr() + "_" + leafSet.getHiPort()) == null){
-            Socket s = new Socket(leafSet.getHiAddr(), leafSet.getHiHostPort());
-            Connection c = new Connection(this, s);
-        }
     }
 
     private void parseExitOverlayMessage(ExitOverlayMessage msg) {
@@ -367,6 +364,16 @@ public class MemberPeer implements Peer {
 
     private void exitOverlay() throws IOException {
         logger.log(Level.FINE, "Attempting to exit overlay now.");
+
+        //Make sure I am connected to my leaf set
+        if (ipConnectionMap.get(leafSet.getLoAddr() + "_" + leafSet.getLoPort()) == null) {
+            Socket s = new Socket(leafSet.getLoAddr(), leafSet.getLoHostPort());
+            Connection c = new Connection(this, s);
+        }
+        if (ipConnectionMap.get(leafSet.getHiAddr() + "_" + leafSet.getHiPort()) == null) {
+            Socket s = new Socket(leafSet.getHiAddr(), leafSet.getHiHostPort());
+            Connection c = new Connection(this, s);
+        }
 
         Connection hiConnect = ipConnectionMap.get(leafSet.getHiAddr() + "_" + leafSet.getHiPort());
         Connection loConnect = ipConnectionMap.get(leafSet.getLoAddr() + "_" + leafSet.getLoPort());

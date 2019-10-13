@@ -17,6 +17,7 @@ public class DataStore {
     }
 
     public void writeFile(String fileName, Object contents) throws IOException {
+        files.add(fileName);
         File newFile = new File(storageDir + fileName);
         FileOutputStream fs = new FileOutputStream(newFile);
         fs.write((byte[]) contents);

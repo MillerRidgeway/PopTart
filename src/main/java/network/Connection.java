@@ -25,8 +25,6 @@ public class Connection {
         this.recv.start();
 
         p.addNewConnection(this);
-        System.out.println("New connection made to: " +
-                s.getInetAddress().getHostAddress() + "_" + s.getPort());
     }
 
     public static Connection newConnection(Peer p, Socket s) throws IOException {
@@ -37,7 +35,6 @@ public class Connection {
         try {
             recv.stopRunning();
             s.close();
-            System.out.println("Connection to " + getAddr() + "_" + getPort() + " closed");
         } catch (IOException e) {
             System.out.println("Failed to close connection.");
             e.printStackTrace();
