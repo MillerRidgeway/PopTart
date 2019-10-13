@@ -7,11 +7,13 @@ import network.ServerThread;
 import routing.LeafSet;
 import routing.RoutingTable;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Map;
@@ -244,6 +246,22 @@ public class MemberPeer implements Peer {
                 insertNewLeaf(msg);
                 joiningPeerConnection.sendMessage(new ForwardToMessage(pitstop, "", "", rowIndex,
                         routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
+
+                for (File f : dataStore.getFilesForSending()) {
+                    try {
+                        String fileId = Util.getFilenameHash(f.getName());
+                        int myFileDiff = Math.abs(Util.getNumericalDifference(this.id, fileId));
+                        int joinFileDiff = Math.abs(Util.getNumericalDifference(msg.getId(), fileId));
+                        if (joinFileDiff < myFileDiff) {
+                            Object contents = Files.readAllBytes(f.toPath());
+                            joiningPeerConnection.sendMessage(new FileStoreMessage(fileId, f, contents));
+                            dataStore.deleteFile(f.getName());
+                        }
+                    } catch (Exception e) {
+                        System.out.println("Error forwarding file to closer peer.");
+                        e.printStackTrace();
+                    }
+                }
             }
 
         } else { //Route by DHT
@@ -392,7 +410,6 @@ public class MemberPeer implements Peer {
             val.closeConnection();
             ipConnectionMap.remove(addrPort);
         }
-
         logger.log(Level.FINE, "Overlay exit successful");
     }
 
