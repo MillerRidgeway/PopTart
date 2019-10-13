@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Map;
@@ -85,7 +86,7 @@ public class MemberPeer implements Peer {
         while (true) {
             System.out.println("Please enter a command: ");
             String command = scn.nextLine();
-            switch (command) {
+            switch (command.toLowerCase()) {
                 case "list-nodes":
                     for (Map.Entry<String, Connection> e : ipConnectionMap.entrySet()) {
                         System.out.println("Connected node: " + e.getValue().toString());
@@ -99,6 +100,15 @@ public class MemberPeer implements Peer {
                     break;
                 case "pathway":
                     System.out.println("Took the path: " + this.travelRoute);
+                    break;
+                case "exit":
+                    System.out.println("Exiting the overlay now.");
+                    try {
+                        exitOverlay();
+                    } catch (IOException e) {
+                        System.out.println("Error exiting overlay.");
+                        e.printStackTrace();
+                    }
                     break;
                 default:
                     System.out.println("Unknown command.");
@@ -263,7 +273,7 @@ public class MemberPeer implements Peer {
         dataStore.writeFile(msg.getFile().getName(), msg.getContents());
     }
 
-    private void parseUpdateLeafSetMessage(UpdateLeafSetMessage msg) {
+    private void parseUpdateLeafSetMessage(UpdateLeafSetMessage msg) throws IOException {
         logger.log(Level.FINE, "Changing leaf set to reflect updated version");
         logger.log(Level.FINE, "New leafset is: \n" + msg.getResponseLeaf());
 
@@ -273,6 +283,16 @@ public class MemberPeer implements Peer {
             this.leafSet.setHi(msg.getResponseLeaf().getHi(), msg.getResponseLeaf().getFullHi());
         else
             this.leafSet = msg.getResponseLeaf();
+
+        //Make sure I am connected to my leaf set
+        if (ipConnectionMap.get(leafSet.getLoAddr() + "_" + leafSet.getLoPort()) == null) {
+            Socket s = new Socket(leafSet.getLoAddr(), leafSet.getLoHostPort());
+            Connection c = new Connection(this, s);
+        }
+        if(ipConnectionMap.get(leafSet.getHiAddr() + "_" + leafSet.getHiPort()) == null){
+            Socket s = new Socket(leafSet.getHiAddr(), leafSet.getHiHostPort());
+            Connection c = new Connection(this, s);
+        }
     }
 
     private void parseExitOverlayMessage(ExitOverlayMessage msg) {
@@ -343,6 +363,30 @@ public class MemberPeer implements Peer {
             }
             joiningPeerConnection.sendMessage(new UpdateLeafSetMessage(newSet));
         }
+    }
+
+    private void exitOverlay() throws IOException {
+        logger.log(Level.FINE, "Attempting to exit overlay now.");
+
+        Connection hiConnect = ipConnectionMap.get(leafSet.getHiAddr() + "_" + leafSet.getHiPort());
+        Connection loConnect = ipConnectionMap.get(leafSet.getLoAddr() + "_" + leafSet.getLoPort());
+
+        LeafSet newHi = new LeafSet("current", leafSet.getLo(), "current", leafSet.getFullLo());
+        LeafSet newLo = new LeafSet(leafSet.getHi(), "current", leafSet.getFullHi(), "current");
+
+        hiConnect.sendMessage(new UpdateLeafSetMessage(newHi));
+        loConnect.sendMessage(new UpdateLeafSetMessage(newLo));
+
+        for (Map.Entry<String, Connection> e : ipConnectionMap.entrySet()) {
+            Connection val = e.getValue();
+            String addrPort = val.getAddr() + "_" + val.getPort();
+            val.sendMessage(
+                    new ExitOverlayMessage(val.getLocalAddr(), val.getLocalPort()));
+            val.closeConnection();
+            ipConnectionMap.remove(addrPort);
+        }
+
+        logger.log(Level.FINE, "Overlay exit successful");
     }
 
 }

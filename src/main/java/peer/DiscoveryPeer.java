@@ -65,6 +65,8 @@ public class DiscoveryPeer implements Peer {
     public void parseMessage(Message msg) throws IOException {
         if (msg instanceof DiscoverMessage) {
             parseDiscoverMessage((DiscoverMessage) msg);
+        } else if (msg instanceof ExitOverlayMessage) {
+            parseExitOverlayMessage((ExitOverlayMessage) msg);
         }
     }
 
@@ -108,6 +110,18 @@ public class DiscoveryPeer implements Peer {
             knownIds.add(msg.getId());
             connectionHostMap.put(msg.getHost() + "_" + msg.getPort(), msg.getHostPort());
         }
+    }
+
+    private void parseExitOverlayMessage(ExitOverlayMessage msg) {
+        logger.log(Level.FINE, "Exit overlay message recieved.");
+        logger.log(Level.FINE, "Removing record from current connections: "
+                + msg.getExitingIp() + "_" + msg.getExitingPort());
+
+        String addrPort = msg.getExitingIp() + "_" + msg.getExitingPort();
+        connectionMap.get(addrPort).closeConnection();
+        connectionMap.remove(addrPort);
+
+        //TODO - Remove ID from list of known IDs
     }
 
 
