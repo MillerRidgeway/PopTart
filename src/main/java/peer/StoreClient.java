@@ -123,7 +123,7 @@ public class StoreClient implements Peer {
                 String addrPort = val.getAddr() + "_" + val.getPort();
                 if (!(addrPort.equals(discoveryInfo))) {
                     val.sendMessage(
-                            new ExitOverlayMessage(val.getLocalAddr(), val.getLocalPort()));
+                            new ExitOverlayMessage(this.getId(), val.getLocalAddr(), val.getLocalPort()));
                     val.closeConnection();
                     ipConnectionMap.remove(addrPort);
                 }

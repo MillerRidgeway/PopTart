@@ -393,7 +393,7 @@ public class MemberPeer implements Peer {
             Connection val = e.getValue();
             String addrPort = val.getAddr() + "_" + val.getPort();
             val.sendMessage(
-                    new ExitOverlayMessage(val.getLocalAddr(), val.getLocalPort()));
+                    new ExitOverlayMessage(this.getId(), val.getLocalAddr(), val.getLocalPort()));
             val.closeConnection();
             ipConnectionMap.remove(addrPort);
         }
