@@ -26,7 +26,7 @@ public class DataStore {
     public ArrayList<File> getFilesForSending() {
         ArrayList<File> listAsFiles = new ArrayList<>();
         for (String s : files) {
-            File f = new File(s);
+            File f = new File(storageDir + s);
             listAsFiles.add(f);
         }
         return listAsFiles;

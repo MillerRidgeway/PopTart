@@ -77,7 +77,7 @@ public class MemberPeer implements Peer {
     public static void main(String[] args) throws Exception {
         InetAddress discoveryPeerAddr = InetAddress.getByName(args[0]);
         if (args.length == 3)
-            new MemberPeer(discoveryPeerAddr, Integer.parseInt(args[1]), null, args[2]);
+            new MemberPeer(discoveryPeerAddr, Integer.parseInt(args[1]), args[2], null);
         else {
             new MemberPeer(discoveryPeerAddr, Integer.parseInt(args[1]), args[2], args[3]);
         }
@@ -253,6 +253,8 @@ public class MemberPeer implements Peer {
                         int myFileDiff = Math.abs(Util.getNumericalDifference(this.id, fileId));
                         int joinFileDiff = Math.abs(Util.getNumericalDifference(msg.getId(), fileId));
                         if (joinFileDiff < myFileDiff) {
+                            logger.log(Level.FINE, "Sending file " + f.getName() + " to closer peer " +
+                                    msg.getId());
                             Object contents = Files.readAllBytes(f.toPath());
                             joiningPeerConnection.sendMessage(new FileStoreMessage(fileId, f, contents));
                             dataStore.deleteFile(f.getName());
