@@ -300,6 +300,7 @@ public class MemberPeer implements Peer {
         Connection toBeClosed = ipConnectionMap.get(addrPort);
         toBeClosed.closeConnection();
         ipConnectionMap.remove(addrPort);
+        routingTable.removePeer(msg.getExitingId());
 
         logger.log(Level.FINE, "Peer successfully removed from connection list.");
     }
