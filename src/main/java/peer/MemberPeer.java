@@ -172,6 +172,7 @@ public class MemberPeer implements Peer {
         String randId = Util.getTimestampId();
         this.id = randId;
         System.out.println("My new ID is: " + this.id);
+        routingTable = new RoutingTable(this);
         DiscoverMessage dm = new DiscoverMessage(randId, discoveryConnection.getAddr(), serverThread.getPort(),
                 discoveryConnection.getLocalPort(), false);
         discoveryConnection.sendMessage(dm);
