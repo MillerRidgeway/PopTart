@@ -128,7 +128,10 @@ public class DiscoveryPeer implements Peer {
         Map<String, Connection> tempMap = new ConcurrentHashMap<>(connectionMap);
         tempMap.remove(info.getHost() + "_" + info.getPort());
         Object[] vals = tempMap.keySet().toArray();
-        String key = (String) vals[0];//generator.nextInt(vals.length)
+        String key = (String) vals[generator.nextInt(vals.length)];
+        while (connectionMap.get(key) == null) {
+            key = (String) vals[generator.nextInt(vals.length)];
+        }
         c.sendMessage(new JoinAckMessage(key, connectionHostMap.get(key)));
     }
 }

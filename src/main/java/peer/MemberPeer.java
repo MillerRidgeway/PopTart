@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -223,6 +222,24 @@ public class MemberPeer implements Peer {
         if (msg.getLeafSet() != null)
             routingTable.insertNewPeer(msg.getId(), msg.getAddr(), msg.getHostPort());
 
+        for (File f : dataStore.getFilesForSending()) {
+            try {
+                String fileId = Util.getFilenameHash(f.getName());
+                int myFileDiff = Math.abs(Util.getNumericalDifference(this.id, fileId));
+                int joinFileDiff = Math.abs(Util.getNumericalDifference(msg.getId(), fileId));
+                if (joinFileDiff < myFileDiff) {
+                    logger.log(Level.FINE, "Sending file " + f.getName() + " to closer peer " +
+                            msg.getId());
+                    Object contents = Files.readAllBytes(f.toPath());
+                    joiningPeerConnection.sendMessage(new FileStoreMessage(fileId, f, contents));
+                    dataStore.deleteFile(f.getName());
+                }
+            } catch (Exception e) {
+                System.out.println("Error forwarding file to closer peer.");
+                e.printStackTrace();
+            }
+        }
+
         if (leafSet.isEmpty()) { // Second node in the system
             insertNewLeaf(msg);
             joiningPeerConnection.sendMessage(new ForwardToMessage(pitstop, "", "", rowIndex,
@@ -247,24 +264,6 @@ public class MemberPeer implements Peer {
                 insertNewLeaf(msg);
                 joiningPeerConnection.sendMessage(new ForwardToMessage(pitstop, "", "", rowIndex,
                         routingTable.getRow(rowIndex), routingTable.getIpFromRow(routingTable.getRow(rowIndex))));
-
-                for (File f : dataStore.getFilesForSending()) {
-                    try {
-                        String fileId = Util.getFilenameHash(f.getName());
-                        int myFileDiff = Math.abs(Util.getNumericalDifference(this.id, fileId));
-                        int joinFileDiff = Math.abs(Util.getNumericalDifference(msg.getId(), fileId));
-                        if (joinFileDiff < myFileDiff) {
-                            logger.log(Level.FINE, "Sending file " + f.getName() + " to closer peer " +
-                                    msg.getId());
-                            Object contents = Files.readAllBytes(f.toPath());
-                            joiningPeerConnection.sendMessage(new FileStoreMessage(fileId, f, contents));
-                            dataStore.deleteFile(f.getName());
-                        }
-                    } catch (Exception e) {
-                        System.out.println("Error forwarding file to closer peer.");
-                        e.printStackTrace();
-                    }
-                }
             }
 
         } else { //Route by DHT
