@@ -82,6 +82,13 @@ public class RoutingTable {
         idConnectionMap.put(id, addr + "_" + port);
     }
 
+    public void removePeer(String id) {
+        int rowIndex = Util.getIdMatchingDigits(owner.getId(), id);
+        int colIndex = Character.digit(id.charAt(rowIndex), 16);
+        idTable.get(rowIndex).set(colIndex, "DEFAULT");
+        idConnectionMap.remove(id);
+    }
+
     @Override
     public String toString() {
         String tableString = "";

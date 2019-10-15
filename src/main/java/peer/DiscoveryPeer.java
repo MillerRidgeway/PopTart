@@ -50,9 +50,8 @@ public class DiscoveryPeer implements Peer {
             String command = scn.nextLine();
             switch (command) {
                 case "list-nodes":
-                    for (Map.Entry<String, Connection> e : connectionMap.entrySet()) {
-                        System.out.println("Connected node: " + e.getValue().toString());
-                    }
+                    for (String s : knownIds)
+                        System.out.println("Connected peer: " + s);
                     break;
                 default:
                     System.out.println("Unknown command.");
@@ -112,16 +111,16 @@ public class DiscoveryPeer implements Peer {
         }
     }
 
-    private void parseExitOverlayMessage(ExitOverlayMessage msg) {
+    private synchronized void parseExitOverlayMessage(ExitOverlayMessage msg) {
         logger.log(Level.FINE, "Exit overlay message recieved.");
+        logger.log(Level.FINE, "Peer exiting is: " + msg.getExitingId());
         logger.log(Level.FINE, "Removing record from current connections: "
                 + msg.getExitingIp() + "_" + msg.getExitingPort());
 
         String addrPort = msg.getExitingIp() + "_" + msg.getExitingPort();
         connectionMap.get(addrPort).closeConnection();
         connectionMap.remove(addrPort);
-
-        //TODO - Remove ID from list of known IDs
+        knownIds.remove(msg.getExitingId());
     }
 
     private void SendRandPeer(Connection c, DiscoverMessage info) throws IOException {

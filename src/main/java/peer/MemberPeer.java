@@ -174,6 +174,7 @@ public class MemberPeer implements Peer {
         String randId = Util.getTimestampId();
         this.id = randId;
         System.out.println("My new ID is: " + this.id);
+        routingTable = new RoutingTable(this);
         DiscoverMessage dm = new DiscoverMessage(randId, discoveryConnection.getAddr(), serverThread.getPort(),
                 discoveryConnection.getLocalPort(), false);
         discoveryConnection.sendMessage(dm);
@@ -320,6 +321,7 @@ public class MemberPeer implements Peer {
         Connection toBeClosed = ipConnectionMap.get(addrPort);
         toBeClosed.closeConnection();
         ipConnectionMap.remove(addrPort);
+        routingTable.removePeer(msg.getExitingId());
 
         logger.log(Level.FINE, "Peer successfully removed from connection list.");
     }
@@ -363,8 +365,11 @@ public class MemberPeer implements Peer {
                 newSet = new LeafSet(leafSet.getHi(), this.id, leafSet.getFullHi(), thisAddrPort);
                 otherLeafSet = new LeafSet("current", msg.getId(), "current", msgAddrPort);
 
-                Socket s = new Socket(InetAddress.getByName(leafSet.getHiAddr()), leafSet.getHiHostPort());
-                Connection otherConnection = new Connection(this, s);
+                Connection otherConnection = ipConnectionMap.get(leafSet.getHiAddr() + "_" + leafSet.getHiPort());
+                if (otherConnection == null) {
+                    Socket s = new Socket(InetAddress.getByName(leafSet.getHiAddr()), leafSet.getHiHostPort());
+                    otherConnection = new Connection(this, s);
+                }
                 otherConnection.sendMessage(new UpdateLeafSetMessage(otherLeafSet));
 
                 leafSet.setHi(msg.getId(), msgAddrPort);
@@ -372,8 +377,11 @@ public class MemberPeer implements Peer {
                 newSet = new LeafSet(this.id, leafSet.getLo(), thisAddrPort, leafSet.getFullLo());
                 otherLeafSet = new LeafSet(msg.getId(), "current", msgAddrPort, "current");
 
-                Socket s = new Socket(InetAddress.getByName(leafSet.getLoAddr()), leafSet.getLoHostPort());
-                Connection otherConnection = new Connection(this, s);
+                Connection otherConnection = ipConnectionMap.get(leafSet.getLoAddr() + "_" + leafSet.getLoPort());
+                if (otherConnection == null) {
+                    Socket s = new Socket(InetAddress.getByName(leafSet.getLoAddr()), leafSet.getLoHostPort());
+                    otherConnection = new Connection(this, s);
+                }
                 otherConnection.sendMessage(new UpdateLeafSetMessage(otherLeafSet));
 
                 leafSet.setLo(msg.getId(), msgAddrPort);
@@ -386,17 +394,16 @@ public class MemberPeer implements Peer {
         logger.log(Level.FINE, "Attempting to exit overlay now.");
 
         //Make sure I am connected to my leaf set
-        if (ipConnectionMap.get(leafSet.getLoAddr() + "_" + leafSet.getLoPort()) == null) {
-            Socket s = new Socket(leafSet.getLoAddr(), leafSet.getLoHostPort());
-            Connection c = new Connection(this, s);
-        }
-        if (ipConnectionMap.get(leafSet.getHiAddr() + "_" + leafSet.getHiPort()) == null) {
-            Socket s = new Socket(leafSet.getHiAddr(), leafSet.getHiHostPort());
-            Connection c = new Connection(this, s);
-        }
-
-        Connection hiConnect = ipConnectionMap.get(leafSet.getHiAddr() + "_" + leafSet.getHiPort());
         Connection loConnect = ipConnectionMap.get(leafSet.getLoAddr() + "_" + leafSet.getLoPort());
+        if (loConnect == null) {
+            Socket s = new Socket(leafSet.getLoAddr(), leafSet.getLoHostPort());
+            loConnect = new Connection(this, s);
+        }
+        Connection hiConnect = ipConnectionMap.get(leafSet.getHiAddr() + "_" + leafSet.getHiPort());
+        if (hiConnect == null) {
+            Socket s = new Socket(leafSet.getHiAddr(), leafSet.getHiHostPort());
+            hiConnect = new Connection(this, s);
+        }
 
         LeafSet newHi = new LeafSet("current", leafSet.getLo(), "current", leafSet.getFullLo());
         LeafSet newLo = new LeafSet(leafSet.getHi(), "current", leafSet.getFullHi(), "current");
@@ -408,7 +415,7 @@ public class MemberPeer implements Peer {
             Connection val = e.getValue();
             String addrPort = val.getAddr() + "_" + val.getPort();
             val.sendMessage(
-                    new ExitOverlayMessage(val.getLocalAddr(), val.getLocalPort()));
+                    new ExitOverlayMessage(this.getId(), val.getLocalAddr(), val.getLocalPort()));
             val.closeConnection();
             ipConnectionMap.remove(addrPort);
         }
