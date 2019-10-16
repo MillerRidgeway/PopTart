@@ -33,7 +33,7 @@ public class DiscoveryPeer implements Peer {
         Handler fh = new FileHandler("discoveryPeer.log");
         fh.setFormatter(new SimpleFormatter());
         logger.addHandler(fh);
-        logger.setLevel(Level.FINE);
+        logger.setLevel(Level.FINER);
 
         startConsole();
     }
@@ -132,6 +132,9 @@ public class DiscoveryPeer implements Peer {
         while (connectionMap.get(key) == null) {
             key = (String) vals[generator.nextInt(vals.length)];
         }
+
+        logger.log(Level.FINER, "Sending peer for joining connection: " + key);
+        logger.log(Level.FINER, "Host port of that peer is: " + connectionHostMap.get(key));
         c.sendMessage(new JoinAckMessage(key, connectionHostMap.get(key)));
     }
 }

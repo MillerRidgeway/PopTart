@@ -18,5 +18,4 @@ for i in {1..10}
 
 cmd="bash -c 'java -cp libs/PopTart.jar peer.StoreClient 127.0.0.1 51000'"
 foo=($tab -e "$cmd")
-    gnome-terminal "${foo[@]}"
 gnome-terminal "${foo[@]}"
