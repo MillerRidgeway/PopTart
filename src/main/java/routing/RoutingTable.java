@@ -19,7 +19,7 @@ public class RoutingTable {
         for (int i = 0; i < 4; i++) {
             idTable.add(new ArrayList<>());
             for (int j = 0; j < 16; j++) {
-                idTable.get(i).add("DEFAULT");
+                idTable.get(i).add("____");
             }
         }
         for (int i = 0; i < owner.getId().length(); i++) {
@@ -27,7 +27,7 @@ public class RoutingTable {
             idTable.get(i).set(colIndex, owner.getId());
         }
         idConnectionMap.put(owner.getId(), owner.getConnectionInfo());
-        idConnectionMap.put("DEFAULT", "DEFAULT");
+        idConnectionMap.put("____", "____");
     }
 
     public String findClosestIp(String id) {
@@ -42,7 +42,7 @@ public class RoutingTable {
             String entry = idTable.get(rowIndex).get(i);
             int idDigit = Character.digit(id.charAt(rowIndex), 16);
             int tableDigit = Character.digit(entry.charAt(rowIndex), 16);
-            if (!entry.equals("DEFAULT")) {
+            if (!entry.equals("____")) {
                 int diff = Math.abs(tableDigit - idDigit);
                 if (diff < closestDiff) {
                     closestIndex = i;
@@ -85,7 +85,7 @@ public class RoutingTable {
     public void removePeer(String id) {
         int rowIndex = Util.getIdMatchingDigits(owner.getId(), id);
         int colIndex = Character.digit(id.charAt(rowIndex), 16);
-        idTable.get(rowIndex).set(colIndex, "DEFAULT");
+        idTable.get(rowIndex).set(colIndex, "____");
         idConnectionMap.remove(id);
     }
 
@@ -95,11 +95,14 @@ public class RoutingTable {
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 16; j++) {
                 if (j == 15)
-                    tableString += idTable.get(i).get(j) + "\n";
+                    tableString += idTable.get(i).get(j).toUpperCase() + "| \n";
+                else if (j == 0)
+                    tableString += "|" + idTable.get(i).get(j).toUpperCase() + "---";
                 else
-                    tableString += idTable.get(i).get(j) + ",";
+                    tableString += idTable.get(i).get(j).toUpperCase() + "---";
             }
         }
+        tableString += "";
         return tableString;
     }
 }

@@ -227,6 +227,9 @@ public class MemberPeer implements Peer {
                 String fileId = Util.getFilenameHash(f.getName());
                 int myFileDiff = Math.abs(Util.getNumericalDifference(this.id, fileId));
                 int joinFileDiff = Math.abs(Util.getNumericalDifference(msg.getId(), fileId));
+                logger.log(Level.FINER, "File ID is: " + fileId);
+                logger.log(Level.FINER, "My diff is w/ file is: " + myFileDiff);
+                logger.log(Level.FINER, "Joining peer diff w/ file is: " + joinFileDiff);
                 if (joinFileDiff < myFileDiff) {
                     logger.log(Level.FINE, "Sending file " + f.getName() + " to closer peer " +
                             msg.getId());

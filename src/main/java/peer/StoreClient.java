@@ -60,9 +60,9 @@ public class StoreClient implements Peer {
             String fName = scn.nextLine();
             System.out.println("Attempting to upload: " + fName);
             try {
-                this.fileId = Util.getFilenameHash(fName);
-                System.out.println("File ID is: " + fileId);
                 File f = new File(fName);
+                this.fileId = Util.getFilenameHash(f.getName());
+                System.out.println("File ID is: " + fileId);
                 Object contents = Files.readAllBytes(f.toPath());
 
                 DiscoverMessage dm = new DiscoverMessage(getId(), discoveryConnection.getAddr(), serverThread.getPort(),
